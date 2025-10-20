@@ -1,0 +1,38 @@
+{
+  "name": "battlemesh",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "dev:admin": "NUXT_PUBLIC_NODE_MODE=admin PORT=3000 LOAD_PREVIOUS_STATE=true npm run dev",
+    "dev:capture": "NUXT_PUBLIC_NODE_MODE=capture-point NUXT_PUBLIC_ADMIN_URL=ws://localhost:3000/api/websocket npm run dev",
+    "dev:multi": "./dev.sh 3",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest --run",
+    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx"
+  },
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@pinia/nuxt": "^0.11.2",
+    "leaflet": "^1.9.4",
+    "nuxt": "^4.1.3",
+    "vue": "^3.5.22",
+    "vue-router": "^4.5.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@nuxt/test-utils": "^3.19.2",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vue/test-utils": "^2.4.6",
+    "eslint": "^9.38.0",
+    "happy-dom": "^18.0.1",
+    "vitest": "^3.2.4"
+  }
+}
