@@ -1,6 +1,9 @@
 {
   "name": "battlemesh",
+  "version": "1.0.0",
+  "description": "A real-time capture point system for airsoft, paintball, and nerf games with GPS tracking and live tactical maps",
   "type": "module",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "nuxt build",
