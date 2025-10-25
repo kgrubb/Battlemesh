@@ -17,7 +17,8 @@
       </div>
       
       <div v-if="hasGPS" class="border-l-2 border-slate-700 pl-4">
-        <span class="text-green-500">📍 GPS</span>
+        <span v-if="isUsingStatic" class="text-cyan-500">📌 Static GPS</span>
+        <span v-else class="text-green-500">📍 GPS</span>
       </div>
       <div v-else class="border-l-2 border-slate-700 pl-4">
         <span class="text-amber-500">⚠ No GPS</span>
@@ -62,6 +63,12 @@ const hasGPS = computed(() => {
   // Check if this node has GPS position
   const node = gameState.nodes.find(n => n.id === gameState.localNodeName)
   return !!(node && node.position)
+})
+
+const isUsingStatic = computed(() => {
+  // Check if using static position
+  const cp = gameState.localCapturePoint
+  return !!(cp && cp.useStaticPosition && cp.staticPosition)
 })
 </script>
 

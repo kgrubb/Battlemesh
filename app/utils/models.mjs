@@ -16,6 +16,8 @@ export function createCapturePoint(name, position = null) {
     id: name, // NATO name IS the ID (Alpha, Bravo, etc.)
     teamId: null,
     position,
+    staticPosition: null, // Pre-configured static GPS coordinates
+    useStaticPosition: false, // Whether to use static position instead of GPS
     lastCaptureTime: null,
     totalCaptures: 0
   }
