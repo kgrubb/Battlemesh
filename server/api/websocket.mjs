@@ -58,36 +58,51 @@ export default defineWebSocketHandler({
             
             // Send current server state to admin
             const serverState = stateManager.getState()
-            const activeNodes = []
             
-            // Build list of currently connected nodes (use NATO names)
-            for (const [, pData] of peers) {
-              if (pData.natoName && pData.mode) {
-                activeNodes.push({
-                  id: pData.natoName, // NATO name is the ID
-                  mode: pData.mode,
-                  status: 'online',
-                  lastSeen: pData.lastSeen
-                })
-              }
+            // Don't include nodes array - nodes are ephemeral and managed via WebSocket events
+            const stateWithoutNodes = {
+              teams: serverState.teams,
+              capturePoints: serverState.capturePoints,
+              gameActive: serverState.gameActive,
+              gameStartTime: serverState.gameStartTime,
+              activityFeed: serverState.activityFeed
             }
-            
             peer.send(JSON.stringify({
               type: 'server-state',
-              state: {
-                ...serverState,
-                nodes: activeNodes // Use NATO names
-              },
+              state: stateWithoutNodes,
               timestamp: Date.now()
             }))
+            
+            // Send node-joined events for all currently connected nodes
+            // This ensures admin knows about nodes that were already connected
+            setTimeout(() => {
+              for (const [, pData] of peers) {
+                if (pData.natoName && pData.mode && pData.mode !== 'admin') {
+                  peer.send(JSON.stringify({
+                    type: 'node-joined',
+                    natoName: pData.natoName,
+                    mode: pData.mode,
+                    timestamp: Date.now()
+                  }))
+                }
+              }
+            }, 100)
           } else {
             console.log('[WebSocket] ✓ Capture node registered:', peerData.natoName)
             
             // Send current server state to this capture node (for reconnection)
             const serverState = stateManager.getState()
+            // Don't include nodes array - nodes are ephemeral and managed via WebSocket events
+            const stateWithoutNodes = {
+              teams: serverState.teams,
+              capturePoints: serverState.capturePoints,
+              gameActive: serverState.gameActive,
+              gameStartTime: serverState.gameStartTime,
+              activityFeed: serverState.activityFeed
+            }
             peer.send(JSON.stringify({
               type: 'server-state',
-              state: serverState,
+              state: stateWithoutNodes,
               timestamp: Date.now()
             }))
             
@@ -161,9 +176,17 @@ export default defineWebSocketHandler({
         case 'server-state-request': {
           // Client requesting current server state
           const serverState = stateManager.getState()
+          // Don't include nodes array - nodes are ephemeral and managed via WebSocket events
+          const stateWithoutNodes = {
+            teams: serverState.teams,
+            capturePoints: serverState.capturePoints,
+            gameActive: serverState.gameActive,
+            gameStartTime: serverState.gameStartTime,
+            activityFeed: serverState.activityFeed
+          }
           peer.send(JSON.stringify({
             type: 'server-state',
-            state: serverState,
+            state: stateWithoutNodes,
             timestamp: Date.now()
           }))
           break
@@ -216,9 +239,17 @@ export default defineWebSocketHandler({
           if (peerData.mode === 'admin') {
             stateManager.clearState().then(() => {
               const freshState = stateManager.getState()
+              // Don't include nodes array - nodes are ephemeral and managed via WebSocket events
+              const stateToBroadcast = {
+                teams: freshState.teams,
+                capturePoints: freshState.capturePoints,
+                gameActive: freshState.gameActive,
+                gameStartTime: freshState.gameStartTime,
+                activityFeed: freshState.activityFeed
+              }
               broadcast({
                 type: 'server-state',
-                state: freshState,
+                state: stateToBroadcast,
                 timestamp: Date.now()
               })
             })

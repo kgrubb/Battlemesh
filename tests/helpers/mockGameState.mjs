@@ -17,6 +17,8 @@ export function createMockCapturePoint(name = 'Alpha', overrides = {}) {
     id: name,
     teamId: null,
     position: null,
+    staticPosition: null,
+    useStaticPosition: false,
     lastCaptureTime: null,
     totalCaptures: 0,
     ...overrides

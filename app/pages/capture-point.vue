@@ -76,20 +76,37 @@ onMounted(async () => {
   console.log('[Capture Point] Initializing network sync...')
   gameSync.initialize()
   
-  // Start GPS tracking
+  // Start GPS tracking (will be used as fallback or if not using static position)
   if (gps.isSupported()) {
     gps.startSerial().catch(() => {
       console.log('Serial GPS not available, using browser geolocation')
     })
   }
   
-  // Send GPS position updates periodically
+  // Send position updates periodically
   gpsUpdateInterval = setInterval(() => {
-    if (gps.position.value && gameState.localNodeName) {
-      gameSync.sendPositionUpdate(gps.position.value)
+    if (!gameState.localNodeName) return
+    
+    // Check if we should use static position
+    const cp = gameState.localCapturePoint
+    const useStatic = cp && cp.useStaticPosition && cp.staticPosition
+    
+    let positionToUse = null
+    
+    if (useStatic) {
+      // Use static position
+      positionToUse = cp.staticPosition
+      console.log('[Capture Point] Using static position')
+    } else if (gps.position.value) {
+      // Use GPS position
+      positionToUse = gps.position.value
+    }
+    
+    if (positionToUse) {
+      gameSync.sendPositionUpdate(positionToUse)
       
       // Update local node and capture point position
-      gameState.updateNodePosition(gameState.localNodeName, gps.position.value)
+      gameState.updateNodePosition(gameState.localNodeName, positionToUse)
     }
   }, GPS_UPDATE_FREQUENCY)
 })

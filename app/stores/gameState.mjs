@@ -263,8 +263,80 @@ export const useGameState = defineStore('gameState', {
       // Also update the capture point position (same NATO name)
       const cp = this.capturePoints.find(cp => cp.id === natoName)
       if (cp) {
+        // Only update position if not using static position or if static position doesn't exist
+        if (!cp.useStaticPosition || !cp.staticPosition) {
+          cp.position = validation.value
+        }
+      }
+    },
+    
+    setStaticPosition(natoName, position) {
+      if (!this.isAdmin) return
+      
+      // Validate GPS coordinates
+      const validation = validateGPSCoordinate(position.lat, position.lon)
+      if (!validation.valid) {
+        console.error('[GameState] Invalid GPS coordinates:', validation.error)
+        throw new Error(validation.error)
+      }
+      
+      // Find or create capture point
+      let cp = this.capturePoints.find(cp => cp.id === natoName)
+      if (!cp) {
+        // Create capture point if it doesn't exist
+        cp = createCapturePoint(natoName)
+        this.capturePoints.push(cp)
+      }
+      
+      // Set static position
+      cp.staticPosition = validation.value
+      
+      // If no GPS position exists, use static position
+      if (!cp.position) {
         cp.position = validation.value
       }
+      
+      this.persistToServer()
+      console.log('[GameState] ✓ Static position set for', natoName)
+    },
+    
+    togglePositionSource(natoName) {
+      if (!this.isAdmin) return
+      
+      const cp = this.capturePoints.find(cp => cp.id === natoName)
+      if (!cp) {
+        console.warn('[GameState] Capture point not found:', natoName)
+        return
+      }
+      
+      // Can only toggle if both GPS and static positions exist
+      const node = this.nodes.find(n => n.id === natoName)
+      if (!cp.staticPosition) {
+        console.warn('[GameState] No static position set for', natoName)
+        return
+      }
+      
+      // Toggle the flag
+      cp.useStaticPosition = !cp.useStaticPosition
+      
+      // Update position based on source
+      if (cp.useStaticPosition) {
+        cp.position = cp.staticPosition
+        console.log('[GameState] ✓ Switched to static position for', natoName)
+      } else {
+        // Fall back to GPS position if available
+        if (node && node.position) {
+          cp.position = node.position
+          console.log('[GameState] ✓ Switched to GPS position for', natoName)
+        } else {
+          // If no GPS, keep using static
+          cp.useStaticPosition = true
+          console.warn('[GameState] No GPS available, keeping static position for', natoName)
+          return
+        }
+      }
+      
+      this.persistToServer()
     },
     
     handleCaptureEvent(natoName, teamId) {
@@ -343,8 +415,8 @@ export const useGameState = defineStore('gameState', {
       if (serverState.gameStartTime) this.gameStartTime = serverState.gameStartTime
       
       // Nodes from server state represent currently connected nodes
-      if (serverState.nodes && serverState.nodes.length > 0) {
-        // Merge with existing nodes to preserve any local node data
+      // Only process if server explicitly provides nodes array
+      if (serverState.nodes) {
         const serverNodeIds = new Set(serverState.nodes.map(n => n.id))
         
         // Keep existing nodes that are in server list

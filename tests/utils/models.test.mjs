@@ -38,6 +38,8 @@ describe('Model Creation Utilities', () => {
       expect(cp).toHaveProperty('id', 'Alpha') // NATO name is the ID
       expect(cp).toHaveProperty('teamId', null)
       expect(cp).toHaveProperty('position', null)
+      expect(cp).toHaveProperty('staticPosition', null)
+      expect(cp).toHaveProperty('useStaticPosition', false)
       expect(cp).toHaveProperty('lastCaptureTime', null)
       expect(cp).toHaveProperty('totalCaptures', 0)
     })

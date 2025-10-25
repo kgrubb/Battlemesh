@@ -99,4 +99,93 @@ describe('Network Synchronization', () => {
       expect(gameState.networkMode).toBe('meshtastic')
     })
   })
+  
+  describe('Static Position Sync', () => {
+    it('should sync static position data via getFullState', async () => {
+      const gameState = useGameState()
+      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.initializeGame()
+      
+      const nodeId = 'Alpha'
+      gameState.addNode(nodeId, 'capture-point')
+      
+      const staticPos = { lat: 37.7749, lon: -122.4194 }
+      gameState.setStaticPosition(nodeId, staticPos)
+      gameState.togglePositionSource(nodeId)
+      
+      const state = gameState.getFullState()
+      const cp = state.capturePoints.find(cp => cp.id === nodeId)
+      
+      expect(cp.staticPosition).toEqual(staticPos)
+      expect(cp.useStaticPosition).toBe(true)
+      expect(state.capturePoints.length).toBeGreaterThan(0)
+    })
+    
+    it('should include static position in broadcast state', async () => {
+      const gameState = useGameState()
+      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.initializeGame()
+      
+      const nodeId = 'Bravo'
+      gameState.addNode(nodeId, 'capture-point')
+      
+      const staticPos = { lat: 40.7128, lon: -74.0060 }
+      gameState.setStaticPosition(nodeId, staticPos)
+      
+      const state = gameState.getFullState()
+      const cp = state.capturePoints.find(cp => cp.id === nodeId)
+      
+      expect(cp).toHaveProperty('staticPosition')
+      expect(cp).toHaveProperty('useStaticPosition')
+      expect(cp.staticPosition).toEqual(staticPos)
+    })
+    
+    it('should handle capture points with static positions in state sync', async () => {
+      const gameState = useGameState()
+      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.initializeGame()
+      
+      const nodeId = 'Charlie'
+      gameState.addNode(nodeId, 'capture-point')
+      
+      const staticPos = { lat: 37.7749, lon: -122.4194 }
+      gameState.setStaticPosition(nodeId, staticPos)
+      gameState.togglePositionSource(nodeId)
+      
+      // Simulate state sync
+      const fullState = gameState.getFullState()
+      gameState.syncFromServer(fullState)
+      
+      const cp = gameState.capturePoints.find(cp => cp.id === nodeId)
+      expect(cp.staticPosition).toEqual(staticPos)
+      expect(cp.useStaticPosition).toBe(true)
+    })
+    
+    it('should maintain backward compatibility with nodes without static position', async () => {
+      const gameState = useGameState()
+      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.initializeGame()
+      
+      const nodeId1 = 'Delta'
+      const nodeId2 = 'Echo'
+      
+      gameState.addNode(nodeId1, 'capture-point')
+      gameState.addNode(nodeId2, 'capture-point')
+      
+      // Only node1 has static position
+      gameState.setStaticPosition(nodeId1, { lat: 37.7749, lon: -122.4194 })
+      
+      const state = gameState.getFullState()
+      const cp1 = state.capturePoints.find(cp => cp.id === nodeId1)
+      const cp2 = state.capturePoints.find(cp => cp.id === nodeId2)
+      
+      // Node1 should have static position
+      expect(cp1.staticPosition).toBeTruthy()
+      
+      // Node2 should work normally without static position
+      expect(cp2).toBeTruthy()
+      expect(cp2.staticPosition).toBeNull()
+      expect(cp2.useStaticPosition).toBe(false)
+    })
+  })
 })
