@@ -22,6 +22,7 @@ export function useGameSync() {
   }
   
   const connectWiFi = () => {
+    console.log('[GameSync] Connecting WiFi with nodeMode:', gameState.nodeMode, 'localNodeName:', gameState.localNodeName)
     wsClient.connect(gameState.localNodeName, gameState.nodeMode)
     activeNetwork.value = 'wifi'
   }
@@ -98,9 +99,12 @@ export function useGameSync() {
         
       case 'node-joined':
         // Node joined the network (uses NATO name)
+        console.log('[GameSync] Received node-joined:', data.natoName, 'mode:', data.mode)
         if (gameState.nodeMode === 'admin' && data.mode === 'capture-point') {
           const existingNode = gameState.nodes.find(n => n.id === data.natoName)
           const existingCp = gameState.capturePoints.find(cp => cp.id === data.natoName)
+          
+          console.log('[GameSync] Existing node:', existingNode?.id, 'Existing CP:', existingCp?.id)
           
           if (existingCp) {
             // Capture point exists (from persisted state) - preserve it
@@ -108,12 +112,15 @@ export function useGameSync() {
             if (!existingNode) {
               const node = { id: data.natoName, mode: data.mode, status: 'online', lastSeen: Date.now(), position: existingCp.position }
               gameState.nodes.push(node)
+              console.log('[GameSync] Added node for existing CP:', data.natoName)
             } else {
               existingNode.status = 'online'
               existingNode.lastSeen = Date.now()
+              console.log('[GameSync] Updated existing node:', data.natoName)
             }
           } else {
             // New node - create both node and capture point
+            console.log('[GameSync] Creating new node and CP:', data.natoName)
             gameState.addNode(data.natoName, data.mode)
           }
           broadcastState()
@@ -132,6 +139,21 @@ export function useGameSync() {
         // Node disconnected (uses NATO name)
         if (gameState.nodeMode === 'admin' && data.natoName) {
           gameState.handleNodeDisconnect(data.natoName)
+        }
+        break
+        
+      case 'nato-name-assigned':
+        // Capture point receiving NATO name assignment from admin
+        if (gameState.nodeMode === 'capture-point' && data.natoName) {
+          gameState.updateNatoName(data.natoName)
+          
+          // Re-register with the new NATO name
+          wsClient.send({
+            type: 'register',
+            natoName: data.natoName,
+            mode: gameState.nodeMode,
+            timestamp: Date.now()
+          })
         }
         break
       

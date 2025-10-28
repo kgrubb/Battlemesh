@@ -94,7 +94,7 @@ const handleKeyDown = (event) => {
 
 onMounted(async () => {
   // Initialize game state with server-provided node ID
-  await gameState.initialize({ nodeMode: 'admin' })
+  await gameState.initialize()
   
   // DON'T call initializeGame() yet - wait for server state first
   

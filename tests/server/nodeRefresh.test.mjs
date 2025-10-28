@@ -9,7 +9,8 @@ describe('Node Status After Admin Refresh', () => {
   
   it('should refresh node status when node-joined event received', async () => {
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add a node (simulating existing connection before refresh)
@@ -63,7 +64,8 @@ describe('Node Status After Admin Refresh', () => {
   
   it('should handle multiple nodes refreshing status', async () => {
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add multiple nodes
@@ -104,7 +106,8 @@ describe('Node Status After Admin Refresh', () => {
   
   it('should create node entry if it does not exist when node-joined received', async () => {
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add a capture point but no node entry (simulating persisted state without node)

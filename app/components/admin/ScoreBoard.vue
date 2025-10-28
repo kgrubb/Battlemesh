@@ -42,7 +42,7 @@
 
 <script setup>
 import { useGameState } from '~/stores/gameState.mjs'
-import { POINTS_PER_SECOND } from '~/config/game-config.mjs'
+import { POINTS_PER_SECOND } from '../../config/game-config.mjs'
 
 const gameState = useGameState()
 const previousScores = ref({})

@@ -1,31 +1,31 @@
 <template>
-  <div class="bg-tactical-dark border-2 border-slate-700 px-4 py-2 font-mono flex items-center justify-between">
-    <div class="flex items-center gap-4 text-xs">
+  <div class="bg-tactical-dark border-2 border-slate-700 px-2 lg:px-4 py-2 font-mono flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-0">
+    <div class="flex flex-wrap items-center gap-2 lg:gap-4 text-xs">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full" :class="adminConnectionClass"/>
         <span :class="adminConnectionTextClass">{{ adminConnectionStatus }}</span>
       </div>
       
-      <div class="border-l-2 border-slate-700 pl-4">
+      <div class="border-l-2 border-slate-700 pl-2 lg:pl-4">
         <span class="text-slate-400">MODE:</span>
         <span class="text-green-500 ml-1">{{ gameState.networkMode.toUpperCase() }}</span>
       </div>
       
-      <div class="border-l-2 border-slate-700 pl-4">
+      <div class="border-l-2 border-slate-700 pl-2 lg:pl-4">
         <span class="text-slate-400">POINT:</span>
         <span class="text-green-500 ml-1">{{ displayName }}</span>
       </div>
       
-      <div v-if="hasGPS" class="border-l-2 border-slate-700 pl-4">
+      <div v-if="hasGPS" class="border-l-2 border-slate-700 pl-2 lg:pl-4">
         <span v-if="isUsingStatic" class="text-cyan-500">📌 Static GPS</span>
         <span v-else class="text-green-500">📍 GPS</span>
       </div>
-      <div v-else class="border-l-2 border-slate-700 pl-4">
+      <div v-else class="border-l-2 border-slate-700 pl-2 lg:pl-4">
         <span class="text-amber-500">⚠ No GPS</span>
       </div>
     </div>
     
-    <div class="flex items-center gap-2">
+    <div class="flex items-center justify-between lg:justify-end gap-2">
       <div v-if="gameState.gameActive" class="flex items-center gap-2 text-green-500">
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
         <span class="text-xs">GAME ACTIVE</span>
@@ -33,6 +33,7 @@
       <div v-else class="text-xs text-slate-500">
         STANDBY
       </div>
+      
     </div>
   </div>
 </template>
@@ -70,5 +71,6 @@ const isUsingStatic = computed(() => {
   const cp = gameState.localCapturePoint
   return !!(cp && cp.useStaticPosition && cp.staticPosition)
 })
+
 </script>
 

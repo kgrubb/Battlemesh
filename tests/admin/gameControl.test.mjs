@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useGameState } from '../../app/stores/gameState.mjs'
-import { resetNameIndex } from '../../app/utils/nodeNames.mjs'
+import { resetNameIndex } from '../../server/utils/nodeNames.mjs'
 
 describe('Admin Game Control', () => {
   beforeEach(() => {
@@ -12,7 +12,8 @@ describe('Admin Game Control', () => {
   describe('Game Initialization', () => {
     it('should initialize game with default teams', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       expect(gameState.teams.length).toBe(2)
@@ -23,18 +24,19 @@ describe('Admin Game Control', () => {
     
     it('should get NATO name from server', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       
-      // In test environment, NATO name won't be fetched from server
-      // It will be null until WebSocket assigns it, which is expected
-      expect(gameState.localNodeName === null || typeof gameState.localNodeName === 'string').toBe(true)
+      // Admin should get hardcoded NATO name
+      expect(gameState.localNodeName).toBe('HQ Command')
     })
   })
   
   describe('Game Lifecycle', () => {
     it('should start game', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       gameState.startGame()
@@ -45,7 +47,8 @@ describe('Admin Game Control', () => {
     
     it('should stop game', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       gameState.startGame()
       
@@ -56,7 +59,8 @@ describe('Admin Game Control', () => {
     
     it('should reset game', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       // Add some scores
@@ -73,7 +77,8 @@ describe('Admin Game Control', () => {
   describe('Team Management', () => {
     it('should add team', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const initialCount = gameState.teams.length
@@ -85,7 +90,8 @@ describe('Admin Game Control', () => {
     
     it('should remove team', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       gameState.addTeam('Green Team', '#10b981')
       
@@ -99,7 +105,8 @@ describe('Admin Game Control', () => {
   describe('Node Management', () => {
     it('should add capture node', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const natoName = gameState.addNode('Alpha', 'capture-point') // Use NATO name directly
@@ -112,7 +119,8 @@ describe('Admin Game Control', () => {
     
     it('should remove node', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       const natoName = gameState.addNode('Alpha', 'capture-point')
       
@@ -126,7 +134,8 @@ describe('Admin Game Control', () => {
   describe('Capture Events', () => {
     it('should handle capture event', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       const natoName = gameState.addNode('Alpha', 'capture-point')
       

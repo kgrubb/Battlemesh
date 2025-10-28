@@ -19,8 +19,7 @@ export function useGPS() {
     try {
       if (!navigator.serial) {
         console.warn('[GPS] Web Serial API not supported, falling back to browser geolocation')
-        startBrowserGeolocation()
-        return
+        return startBrowserGeolocation()
       }
       
       console.log('[GPS] Requesting serial port...')
@@ -35,7 +34,6 @@ export function useGPS() {
     } catch (err) {
       console.error('[GPS] Serial port error:', err)
       error.value = err.message
-      // Fallback to browser geolocation
       startBrowserGeolocation()
     }
   }
@@ -72,9 +70,7 @@ export function useGPS() {
     
     const parts = sentence.split(',')
     
-    // Parse GPGGA or GPRMC sentences
     if (parts[0] === '$GPGGA' || parts[0] === '$GNGGA') {
-      // $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
       if (parts.length >= 10 && parts[2] && parts[4]) {
         const lat = parseCoordinate(parts[2], parts[3])
         const lon = parseCoordinate(parts[4], parts[5])
@@ -85,11 +81,10 @@ export function useGPS() {
         }
       }
     } else if (parts[0] === '$GPRMC' || parts[0] === '$GNRMC') {
-      // $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
       if (parts.length >= 7 && parts[3] && parts[5] && parts[2] === 'A') {
         const lat = parseCoordinate(parts[3], parts[4])
         const lon = parseCoordinate(parts[5], parts[6])
-        updatePosition(lat, lon, 5.0) // Estimate accuracy
+        updatePosition(lat, lon, 5.0)
       }
     }
   }

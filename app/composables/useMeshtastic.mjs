@@ -2,6 +2,8 @@
  * Meshtastic Bluetooth integration using Web Bluetooth API
  */
 
+import { useEventEmitter } from './useEventEmitter.mjs'
+
 const MESHTASTIC_SERVICE_UUID = '6ba1b218-15a8-461f-9fa8-5dcae273eafd'
 const MESHTASTIC_CHARACTERISTIC_UUID = '8ba2bcc2-ee02-4a55-a531-c525c5e454d5'
 
@@ -9,7 +11,7 @@ export function useMeshtastic() {
   const device = ref(null)
   const characteristic = ref(null)
   const connected = ref(false)
-  const eventHandlers = ref({})
+  const { on, off, emit } = useEventEmitter()
   
   const connect = async () => {
     try {
@@ -117,38 +119,6 @@ export function useMeshtastic() {
     emit('disconnected')
   }
   
-  const on = (eventType, handler) => {
-    if (!eventHandlers.value[eventType]) {
-      eventHandlers.value[eventType] = []
-    }
-    if (Array.isArray(eventHandlers.value[eventType])) {
-      eventHandlers.value[eventType].push(handler)
-    } else {
-      const existing = eventHandlers.value[eventType]
-      eventHandlers.value[eventType] = [existing, handler]
-    }
-  }
-  
-  const off = (eventType, handler) => {
-    if (eventHandlers.value[eventType]) {
-      if (Array.isArray(eventHandlers.value[eventType])) {
-        eventHandlers.value[eventType] = eventHandlers.value[eventType].filter(h => h !== handler)
-      } else {
-        delete eventHandlers.value[eventType]
-      }
-    }
-  }
-  
-  const emit = (eventType, data) => {
-    const handlers = eventHandlers.value[eventType]
-    if (handlers) {
-      if (Array.isArray(handlers)) {
-        handlers.forEach(handler => handler(data))
-      } else {
-        handlers(data)
-      }
-    }
-  }
   
   const isSupported = () => {
     return typeof navigator !== 'undefined' && !!navigator.bluetooth

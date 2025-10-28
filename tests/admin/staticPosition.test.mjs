@@ -10,7 +10,8 @@ describe('Static Position Management', () => {
   describe('setStaticPosition', () => {
     it('should set static position for a node', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       // Add a node first
@@ -27,7 +28,8 @@ describe('Static Position Management', () => {
     
     it('should validate GPS coordinates', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Alpha'
@@ -46,7 +48,8 @@ describe('Static Position Management', () => {
     
     it('should create capture point if it does not exist', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Bravo'
@@ -62,7 +65,8 @@ describe('Static Position Management', () => {
   describe('togglePositionSource', () => {
     it('should toggle between GPS and static position', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Charlie'
@@ -97,7 +101,8 @@ describe('Static Position Management', () => {
     
     it('should not toggle if static position is not set', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Delta'
@@ -115,7 +120,8 @@ describe('Static Position Management', () => {
     
     it('should persist static position through state sync', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Echo'
@@ -137,7 +143,8 @@ describe('Static Position Management', () => {
   describe('updateNodePosition with static position', () => {
     it('should not update position when using static position', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Foxtrot'
@@ -158,7 +165,8 @@ describe('Static Position Management', () => {
     
     it('should update position when not using static position', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Golf'

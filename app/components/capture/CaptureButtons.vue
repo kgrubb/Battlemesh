@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-6 p-6">
+  <div class="flex flex-col lg:flex-col gap-0.5 lg:gap-6 p-1 lg:p-6 max-w-full overflow-hidden">
     <div
       v-for="team in gameState.teams"
       :key="team.id"
@@ -7,14 +7,14 @@
     >
       <button
         :disabled="!canCapture"
-        class="w-full min-h-[120px] border-4 font-mono font-bold text-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full min-h-[50px] lg:min-h-[120px] border-4 font-mono font-bold text-xs lg:text-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         :style="buttonStyle(team)"
         :class="buttonClass()"
         @click="captureForTeam(team.id)"
       >
-        <div class="flex flex-col items-center justify-center gap-2">
-          <div class="text-3xl">{{ team.name.toUpperCase() }}</div>
-          <div v-if="isCurrentHolder(team.id)" class="text-sm opacity-75">
+        <div class="flex flex-col items-center justify-center gap-1 lg:gap-2">
+          <div class="text-sm lg:text-3xl">{{ team.name.toUpperCase() }}</div>
+          <div v-if="isCurrentHolder(team.id)" class="text-xs lg:text-sm opacity-75">
             CURRENTLY HELD
           </div>
         </div>
@@ -42,7 +42,7 @@
 
 <script setup>
 import { useGameState } from '~/stores/gameState.mjs'
-import { CAPTURE_COOLDOWN } from '~/config/game-config.mjs'
+import { CAPTURE_COOLDOWN } from '../../config/game-config.mjs'
 
 const gameState = useGameState()
 

@@ -3,7 +3,7 @@ import {
   getNextCaptureName,
   resetNameIndex,
   CAPTURE_POINT_NAMES
-} from '../../app/utils/nodeNames.mjs'
+} from '../../server/utils/nodeNames.mjs'
 
 describe('Node Names Utilities', () => {
   beforeEach(() => {

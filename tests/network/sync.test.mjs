@@ -10,7 +10,8 @@ describe('Network Synchronization', () => {
   describe('State Merging', () => {
     it('should merge remote state from admin', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'capture-point' })
+      gameState.nodeMode = 'capture-point' // Set capture-point mode for test
+      await gameState.initialize()
       
       const remoteState = {
         teams: [
@@ -38,7 +39,8 @@ describe('Network Synchronization', () => {
     
     it('should receive all capture points from admin', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'capture-point' })
+      gameState.nodeMode = 'capture-point' // Set capture-point mode for test
+      await gameState.initialize()
       
       gameState.localNodeName = 'Bravo' // Simulate assigned NATO name
       
@@ -91,7 +93,8 @@ describe('Network Synchronization', () => {
   describe('Network Mode Switching', () => {
     it('should switch network mode', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       
       expect(gameState.networkMode).toBe('wifi')
       
@@ -103,7 +106,8 @@ describe('Network Synchronization', () => {
   describe('Static Position Sync', () => {
     it('should sync static position data via getFullState', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Alpha'
@@ -123,7 +127,8 @@ describe('Network Synchronization', () => {
     
     it('should include static position in broadcast state', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Bravo'
@@ -142,7 +147,8 @@ describe('Network Synchronization', () => {
     
     it('should handle capture points with static positions in state sync', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId = 'Charlie'
@@ -163,7 +169,8 @@ describe('Network Synchronization', () => {
     
     it('should maintain backward compatibility with nodes without static position', async () => {
       const gameState = useGameState()
-      await gameState.initialize({ nodeMode: 'admin' })
+      gameState.nodeMode = 'admin' // Set admin mode for test
+      await gameState.initialize()
       gameState.initializeGame()
       
       const nodeId1 = 'Delta'

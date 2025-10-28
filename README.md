@@ -2,292 +2,208 @@
 
 **A real-time capture point system for airsoft, paintball, and nerf games**
 
-![BattleMesh Admin Control Panel](./public/AdminPanel.png)
-
-
 Turn any device into a capture point with GPS tracking, live maps, and instant score updates. Perfect for outdoor battles with multiple objectives.
 
+![BattleMesh Admin Control Panel](./public/AdminPanel.png)
 
+## 🎮 What It Does
 
-## What Does It Do?
-
-BattleMesh creates a **King of the Hill** style game:
-
+Creates a **King of the Hill** style game:
 - **Admin Control Station**: Start/stop games, view live tactical map, manage teams
-- **Capture Point Devices**: Placed around the field - players tap to capture for their team
+- **Capture Point Devices**: Tablets placed around the field - players tap to capture
 - **Live GPS Tracking**: See all capture points on a satellite map in real-time
 - **Instant Scoring**: Points update immediately when captured or held
 
-**Example Setup**: 1 admin laptop + 8 tablets placed around a field, each acting as a capture point that players fight to control.
+**Typical Setup**: 1 admin laptop + 4-8 tablets as capture points
 
 ## 🚀 Quick Start
 
-### Step 1: Install
+### Install & Run Locally
 
 ```bash
 npm install
+npm run dev
 ```
 
-### Step 2: Try It Locally
+Then open:
+- **Admin**: http://localhost:3000/admin
+- **Capture Point**: http://localhost:3000/capture-point (open multiple tabs)
 
-Test with 1 admin + 3 capture points on your computer:
+**Try it**: Click "Start Mission" on admin, then capture points in multiple browser tabs.
 
-```bash
-npm run dev:multi
-```
+## 📱 Game Setup
 
-**Then open in your browser:**
-- Admin: http://localhost:3000
-- Capture Points: http://localhost:3001, 3002, 3003
+### Requirements
+- **Admin**: Computer with Node.js
+- **Capture Points**: Tablets/phones with web browsers only (no Node.js needed!)
+- **Network**: All devices on the same WiFi
 
-**Try it out:**
-1. Click "Start Mission" on the admin page
-2. Open one of the capture point pages
-3. Click a team color to capture it
-4. Watch the scores update on the admin page and capture point pages!
+### Setup Steps
 
-## How To Use
-
-### For Your First Game
-
-**What You Need:**
-- 1 computer/laptop for the admin (game master)
-- 4-8 tablets/phones for capture points (placed around field)
-- All devices on the same WiFi or meshtastic network
-
-**Setup Steps:**
-
-1. **Build the app:**
+1. **Build & start admin server:**
    ```bash
    npm run build
-   ```
-
-2. **Start the admin server:**
-   ```bash
-   NUXT_PUBLIC_NODE_MODE=admin node .output/server/index.mjs
-   ```
-   
-   Find your computer's IP address (e.g., `192.168.1.10`) and note the port (default: 3000)
-
-3. **Start each capture point device:**
-   ```bash
-   NUXT_PUBLIC_NODE_MODE=capture-point \
-   NUXT_PUBLIC_ADMIN_URL=ws://192.168.1.10:3000/api/websocket \
    node .output/server/index.mjs
    ```
+
+2. **Find admin IP:**
+   ```bash
+   # Linux
+   ip addr
    
-   Replace `192.168.1.10` with your admin's IP address
+   # Windows
+   ipconfig
+   ```
+   Note the IP (e.g., `192.168.1.10`)
+
+3. **Open on tablets:**
+   - Open browser on each tablet
+   - Navigate to: `http://192.168.1.10:3000/capture-point`
+   - Each tablet automatically gets a unique NATO name
 
 4. **Play:**
-   - Open the admin page on your laptop
+   - Open admin: `http://192.168.1.10:3000/admin`
    - Click "Start Game"
-   - Place tablets around field - players tap to capture!
+   - Place tablets around field
+   - Players tap buttons to capture!
 
-## Features
-
-### For Players
-- **Big Tap Buttons**: Capture for Red or Blue team with a single tap
-- **Live Scores**: See current team points in real-time
-- **Tactical Map**: View where other capture points are located
-- **Status Display**: Shows if you're connected and GPS is working
-
-### For Game Masters
-- **Full Control**: Start, stop, and reset games from one screen
-- **Live Tactical Map**: See all capture points with satellite imagery
-- **Team Scores**: Real-time scoreboard with capture bonuses
-- **Activity Feed**: See every capture as it happens
-- **Node Monitor**: Check which devices are online
-
-### Bonus Features
-- **NATO Callsigns**: Each capture point gets a cool name (Alpha, Bravo, Charlie...)
-- **GPS Tracking**: Uses external GPS hardware or your device's location
-- **State Persistence**: Games survive browser refreshes and server restarts
-- **Keyboard Shortcuts**: Press `S` to start/stop, `R` to reset, `C` to center map
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file:
-
-```bash
-# Required for each device
-NUXT_PUBLIC_NODE_MODE=admin                    # or "capture-point"
-
-# Required for capture points only
-NUXT_PUBLIC_ADMIN_URL=ws://192.168.1.10:3000/api/websocket
-
-# Optional
-PORT=3000                                      # Server port
-LOAD_PREVIOUS_STATE=true                       # Resume game after restart
-```
+## ⚙️ Configuration
 
 ### Game Settings
 
-Edit `app/config/game-config.mjs`:
+Create a `.env` file (copy from `env.example`):
 
-```javascript
-// Scoring
-CAPTURE_BONUS_POINTS: 10          // Points for capturing
-HOLD_POINTS_PER_SECOND: 1         // Points per second for holding
+```bash
+# Teams
+DEFAULT_TEAMS='[{"id":1,"name":"Red Team","color":"#ef4444"},{"id":2,"name":"Blue Team","color":"#3b82f6"}]'
 
-// Timing
-GPS_UPDATE_FREQUENCY: 1000        // GPS refresh (milliseconds)
-CAPTURE_COOLDOWN: 500             // Min time between captures
+# Scoring
+POINTS_PER_CAPTURE=10
+POINTS_PER_SECOND=1
+
+# Timing
+GPS_UPDATE_FREQUENCY=1000
+CAPTURE_COOLDOWN=1000
 ```
 
-## How Scoring Works
+### State Management
 
-**Capture Bonus**: +10 points immediately when you capture a point
+```bash
+LOAD_PREVIOUS_STATE=true              # Load previous game state
+STATE_FILE_PATH=.battlemesh-state.json
+```
 
-**Hold Points**: +1 point per second for each point your team controls
+**Note**: Environment variables have sensible defaults - only set what you want to change.
 
-**Example**: If Red Team holds 3 capture points for 60 seconds:
-- Capture bonuses: 3 × 10 = 30 points
-- Hold time: 3 points/sec × 60 seconds = 180 points
-- **Total: 210 points**
+## 📊 How Scoring Works
 
-## Troubleshooting
+- **Capture Bonus**: +10 points when you capture a point
+- **Hold Points**: +1 point per second for each point your team controls
 
-### Capture Point Won't Connect
+**Example**: Red Team holds 3 points for 60 seconds = 3 × 10 + (3 × 1 × 60) = 210 points
 
-**Check these:**
-- Is the admin URL correct in your `.env` file?
-- Are all devices on the same WiFi network?
-- Check admin IP: `ip addr` (Linux) or `ipconfig` (Windows)
+## 🐛 Troubleshooting
+
+### Capture Points Won't Connect
+- Check devices are on the same WiFi network
+- Verify admin IP address is correct
+- Check server is running
 
 ### GPS Not Working
+- Allow location permissions in browser
+- System automatically falls back to browser location if GPS hardware unavailable
 
-**GPS fallback**: The system automatically uses your browser's location if GPS hardware isn't detected. Just allow location permissions when prompted.
+### Reset NATO Names (Testing)
+1. **URL parameter**: `http://192.168.1.10:3000/capture-point?reset=1`
+2. **Reset button**: Click "Reset Identity" in capture point interface
+3. **Console**: `localStorage.removeItem('battlemesh-nato-names')`
 
-**For external GPS**: Connect USB GPS device before starting the server.
+## 📂 Important Files
 
-### Scores Not Updating
+**Server:**
+- `.battlemesh-state.json` - Game state (scores, captures, teams)
 
-- Did you click "Start Game" on the admin page?
-- Check if capture points show "Connected" status
-- Check the admin logs
+**Browser (capture points):**
+- `sessionStorage['battlemesh-tab-id']` - Tab identifier
+- `localStorage['battlemesh-nato-names']` - NATO name mapping
 
-### Map Tiles Not Loading
+## 🎯 Features
 
-- **First load**: Requires internet to download map tiles
-- **After that**: Tiles are cached, works offline
-- **Fix**: Allow location permissions and refresh the page
+### For Players
+- Big tap buttons for quick captures
+- Real-time score display
+- Tactical map view
+- Connection & GPS status
 
-## Important Files
-
-```
-.battlemesh-state.json       # Game state (scores, captures, teams)
-.battlemesh-node-3000        # Admin server's NATO name
-.battlemesh-node-3001        # Capture point NATO names (one per device)
-```
-
-**To reset everything:**
-```bash
-rm .battlemesh-state.json .battlemesh-node-*
-```
-OR alternatively, go to the admin ui and select "CLEAR ALL STATE" in the team config.
-
-## Advanced Topics
-
-<details>
-<summary><b>Network Modes</b></summary>
-
-**WiFi Mode (Default)**:
-- Devices connect via WebSocket
-- Requires WiFi network
-- Best for most setups
-
-**Meshtastic Mode**:
-- Uses Bluetooth mesh radios
-- Works without WiFi
-- Requires Meshtastic devices paired to each server
-- Enable in admin UI: Network Mode → Meshtastic
-
-</details>
-
-<details>
-<summary><b>Hardware Recommendations</b></summary>
-
-**Admin Server:**
-- Laptop or desktop
-- 2+ CPU cores, 2GB RAM
-- 1920×1080 display recommended
-- Ethernet or stable WiFi
-
-**Capture Points (×8 recommended):**
-- Old tablets/phones work great
-- Touchscreen recommended
-- 1280×720 or better
-- WiFi required (Bluetooth for Meshtastic)
-
-</details>
-
-<details>
-<summary><b>State Persistence</b></summary>
-
-**What gets saved:**
-- Team scores and capture point ownership
-- Connected nodes and their locations
+### For Game Masters
+- Full game control (start/stop/reset)
+- Live tactical map with satellite imagery
+- Real-time scoreboard
 - Activity feed (all captures)
-- Game status (running/stopped)
+- Node monitoring
 
-**When it saves:**
-- Automatically after every capture
-- When teams are added/removed
-- When game starts/stops
-- Captures saved immediately (no delay)
+### Bonus
+- NATO callsigns (Alpha, Bravo, Charlie...)
+- GPS tracking (hardware or browser location)
+- State persistence (survives restarts)
+- Keyboard shortcuts (`S` start/stop, `R` reset, `C` center map)
 
-**Browser refresh**: Always loads current game state  
-**Server restart**: Loads previous game if `LOAD_PREVIOUS_STATE=true`
+## 🛠️ Development
 
-</details>
-
-<details>
-<summary><b>Running Tests</b></summary>
-
+### Unit Tests
 ```bash
-npm test              # Run all tests
-npm run test:coverage # See test coverage
+npm test              # Run unit tests
 npm run lint          # Check code style
+npm run test:coverage # Test coverage
 ```
 
-</details>
+### End-to-End Tests
+```bash
+npm run test:e2e        # Run all e2e tests (10-12 seconds, CI optimized)
+npm run test:e2e:ui     # Run e2e tests with UI mode
+npm run test:e2e:headed # Run e2e tests in headed mode
+```
 
-<details>
-<summary><b>Technical Stack</b></summary>
+#### E2E Test Options
+- **All tests**: `npm run test:e2e` - Complete test suite across all browsers (10-12 seconds)
+- **Run specific browser**: `npx playwright test --project=chromium`
+- **Run specific test file**: `npx playwright test tests/e2e/core.spec.ts`
+- **Run in debug mode**: `npx playwright test --debug`
+- **Generate test report**: `npx playwright show-report`
 
-- **Nuxt 4** - Full-stack Vue.js framework
+#### E2E Test Coverage
+- **Core Functionality**: Landing page, admin page, capture point page, multi-page integration
+- **Core Gameplay**: Game start/stop, capture operations, team management, score tracking, state synchronization
+- **Responsive Design**: Mobile and tablet viewport compatibility
+- **Cross-Browser Compatibility**: All pages load correctly across browsers
+- **Performance**: Pages load within reasonable time limits
+- **Browsers**: Chrome, Firefox, Mobile Chrome, iPad Pro
+
+## 🏗️ Tech Stack
+
+- **Nuxt 4** - Vue.js framework
 - **Pinia** - State management
 - **Tailwind CSS** - Styling
-- **Leaflet.js** - Maps with Esri satellite imagery
+- **Leaflet.js** - Maps
 - **WebSockets** - Real-time communication
-- **Web APIs** - GPS, Bluetooth, Geolocation
 
-</details>
-
-
-## Contributing
-
-Found a bug or want to add a feature?
+## 🤝 Contributing
 
 1. Fork the repo
 2. Create a branch: `git checkout -b my-feature`
 3. Make your changes
 4. Run tests: `npm test`
-5. Submit a pull request!
+5. Submit a pull request
 
+## 📄 License
 
-## License
+MIT License
 
-MIT License - feel free to use for your own games!
+## 💡 Tips
 
-
-## Tips for Best Results
-
-- **Pre-cache map tiles**: Zoom around your field area before starting
-- **Test first**: Do a practice run before game day
-- **Charge everything**: Make sure all devices are fully charged
-- **Static IPs**: Set static IPs on all devices to avoid connection issues
-- **Check GPS**: Test GPS before placing devices in the field
+- Pre-cache map tiles by zooming around your field area
+- Do a practice run before game day
+- Ensure all devices are fully charged
+- Use static IPs for stable connections
+- Test GPS functionality before placing devices
 

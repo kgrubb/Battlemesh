@@ -6,7 +6,8 @@ describe('Node Persistence Across Refreshes', () => {
   it('should maintain nodes when syncFromServer does not include nodes array', async () => {
     setActivePinia(createPinia())
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add some nodes
@@ -36,7 +37,8 @@ describe('Node Persistence Across Refreshes', () => {
   it('should not filter out nodes when server-state omits nodes array', async () => {
     setActivePinia(createPinia())
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add a node
@@ -64,7 +66,8 @@ describe('Node Persistence Across Refreshes', () => {
   it('should handle server-state with empty nodes array by not filtering', async () => {
     setActivePinia(createPinia())
     const gameState = useGameState()
-    await gameState.initialize({ nodeMode: 'admin' })
+    gameState.nodeMode = 'admin' // Set admin mode for test
+    await gameState.initialize()
     gameState.initializeGame()
     
     // Add a node

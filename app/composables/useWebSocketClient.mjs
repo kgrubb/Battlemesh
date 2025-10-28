@@ -1,11 +1,12 @@
-import { RECONNECT_DELAY_BASE, RECONNECT_DELAY_MAX } from '~/config/game-config.mjs'
+import { RECONNECT_DELAY_BASE, RECONNECT_DELAY_MAX } from '../config/game-config.mjs'
+import { useEventEmitter } from './useEventEmitter.mjs'
 
 export function useWebSocketClient() {
   const ws = ref(null)
   const connected = ref(false)
   const reconnectAttempts = ref(0)
   const messageQueue = ref([])
-  const eventHandlers = ref({})
+  const { on, off, emit } = useEventEmitter()
   
   let reconnectTimeout = null
   
@@ -14,25 +15,15 @@ export function useWebSocketClient() {
       return
     }
 
-    const config = useRuntimeConfig()
-    let wsUrl
-
-    // For capture nodes, use admin URL if provided
-    if (mode === 'capture-point' && config.public.adminUrl) {
-      wsUrl = config.public.adminUrl
-      console.log('[WS Client] Using configured admin URL:', wsUrl)
-    } else {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      wsUrl = `${protocol}//${window.location.host}/api/websocket`
-      console.log('[WS Client] Using local WebSocket:', wsUrl)
-    }
+    // Always connect to the same server (unified architecture)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/api/websocket`
 
     console.log('[WS Client] Connecting as', mode, 'to:', wsUrl)
 
     ws.value = new WebSocket(wsUrl)
 
     ws.value.onopen = () => {
-      console.log('[WS Client] ✓ Connected as', mode)
       connected.value = true
       reconnectAttempts.value = 0
 
@@ -68,7 +59,6 @@ export function useWebSocketClient() {
     }
     
     ws.value.onclose = () => {
-      console.log('[WS Client] Disconnected')
       connected.value = false
       emit('disconnected')
 
@@ -117,7 +107,6 @@ export function useWebSocketClient() {
       RECONNECT_DELAY_MAX
     )
 
-    console.log(`[WS Client] Reconnecting in ${delay}ms...`)
     reconnectAttempts.value++
 
     reconnectTimeout = setTimeout(() => {
@@ -126,38 +115,6 @@ export function useWebSocketClient() {
     }, delay)
   }
   
-  const on = (eventType, handler) => {
-    if (!eventHandlers.value[eventType]) {
-      eventHandlers.value[eventType] = []
-    }
-    if (Array.isArray(eventHandlers.value[eventType])) {
-      eventHandlers.value[eventType].push(handler)
-    } else {
-      const existing = eventHandlers.value[eventType]
-      eventHandlers.value[eventType] = [existing, handler]
-    }
-  }
-  
-  const off = (eventType, handler) => {
-    if (eventHandlers.value[eventType]) {
-      if (Array.isArray(eventHandlers.value[eventType])) {
-        eventHandlers.value[eventType] = eventHandlers.value[eventType].filter(h => h !== handler)
-      } else {
-        delete eventHandlers.value[eventType]
-      }
-    }
-  }
-  
-  const emit = (eventType, data) => {
-    const handlers = eventHandlers.value[eventType]
-    if (handlers) {
-      if (Array.isArray(handlers)) {
-        handlers.forEach(handler => handler(data))
-      } else {
-        handlers(data)
-      }
-    }
-  }
   
   onUnmounted(() => {
     disconnect()

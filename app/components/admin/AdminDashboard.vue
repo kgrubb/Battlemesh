@@ -99,32 +99,27 @@ const gameSync = inject('gameSync', null)
 const elapsedTime = ref(0)
 let timer = null
 
-const statusBorderClass = computed(() => {
-  return gameState.gameActive 
+const statusBorderClass = computed(() => 
+  gameState.gameActive 
     ? 'border-green-500 shadow-lg shadow-green-500/30'
     : 'border-slate-700'
-})
+)
 
-const statusDotClass = computed(() => {
-  return gameState.gameActive ? 'bg-green-500' : 'bg-slate-600'
-})
+const statusDotClass = computed(() => 
+  gameState.gameActive ? 'bg-green-500' : 'bg-slate-600'
+)
 
-const statusTextClass = computed(() => {
-  return gameState.gameActive ? 'text-green-500' : 'text-slate-500'
-})
+const statusTextClass = computed(() => 
+  gameState.gameActive ? 'text-green-500' : 'text-slate-500'
+)
 
 const leadingTeam = computed(() => {
   if (!gameState.teams.length) return null
   
   const sorted = [...gameState.teams].sort((a, b) => b.score - a.score)
-  const leader = sorted[0]
-  const second = sorted[1]
+  const [leader, second] = sorted
   
-  if (leader && second && leader.score > second.score) {
-    return leader
-  }
-  
-  return null
+  return leader?.score > second?.score ? leader : null
 })
 
 const isTied = computed(() => {
@@ -137,19 +132,16 @@ const scoreDifference = computed(() => {
   if (!leadingTeam.value) return 0
   
   const sorted = [...gameState.teams].sort((a, b) => b.score - a.score)
-  const leader = sorted[0]
-  const second = sorted[1]
+  const [leader, second] = sorted
   
   return leader.score - (second?.score || 0)
 })
 
-const onlineNodesCount = computed(() => {
-  return gameState.nodes.filter(n => n.status === 'online').length
-})
+const onlineNodesCount = computed(() => 
+  gameState.nodes.filter(n => n.status === 'online').length
+)
 
-const totalNodesCount = computed(() => {
-  return gameState.nodes.length
-})
+const totalNodesCount = computed(() => gameState.nodes.length)
 
 const networkHealthClass = computed(() => {
   const ratio = onlineNodesCount.value / Math.max(totalNodesCount.value, 1)
