@@ -26,15 +26,15 @@ describe('useGPS', () => {
     gps = useGPS()
   })
 
-  afterEach(async () => {
-    if (gps && gps.stop) {
-      try {
-        await gps.stop()
-      } catch (error) {
-        // Ignore cleanup errors in tests
-      }
-    }
-  })
+         afterEach(async () => {
+           if (gps && gps.stop) {
+             try {
+               await gps.stop()
+             } catch {
+               // Ignore cleanup errors in tests
+             }
+           }
+         })
 
   describe('Initial State', () => {
     it('should initialize with default values', () => {
@@ -81,21 +81,21 @@ describe('useGPS', () => {
       expect(global.navigator.geolocation.watchPosition).toHaveBeenCalled()
     })
 
-    it('should handle geolocation success', () => {
-      const mockWatchId = 123
-      global.navigator.geolocation.watchPosition.mockImplementation((success, error, options) => {
-        // Simulate successful position
-        setTimeout(() => {
-          success({
-            coords: {
-              latitude: 40.7128,
-              longitude: -74.0060,
-              accuracy: 10
-            }
-          })
-        }, 0)
-        return mockWatchId
-      })
+           it('should handle geolocation success', () => {
+             const mockWatchId = 123
+             global.navigator.geolocation.watchPosition.mockImplementation((success) => {
+               // Simulate successful position
+               setTimeout(() => {
+                 success({
+                   coords: {
+                     latitude: 40.7128,
+                     longitude: -74.0060,
+                     accuracy: 10
+                   }
+                 })
+               }, 0)
+               return mockWatchId
+             })
 
       gps.startBrowserGeolocation()
 
@@ -112,15 +112,15 @@ describe('useGPS', () => {
       })
     })
 
-    it('should handle geolocation error', () => {
-      const mockWatchId = 123
-      global.navigator.geolocation.watchPosition.mockImplementation((success, error, options) => {
-        // Simulate error
-        setTimeout(() => {
-          error({ message: 'Location access denied' })
-        }, 0)
-        return mockWatchId
-      })
+           it('should handle geolocation error', () => {
+             const mockWatchId = 123
+             global.navigator.geolocation.watchPosition.mockImplementation((success, error) => {
+               // Simulate error
+               setTimeout(() => {
+                 error({ message: 'Location access denied' })
+               }, 0)
+               return mockWatchId
+             })
 
       gps.startBrowserGeolocation()
 

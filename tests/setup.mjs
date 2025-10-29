@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 // Minimal mocks for test environment
 
 // Mock Vue composables globally - MUST be first

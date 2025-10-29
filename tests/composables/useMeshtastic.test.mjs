@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+import { useMeshtastic } from '../../app/composables/useMeshtastic.mjs'
+
 // Mock Vue before importing composables
 vi.mock('vue', () => ({
   ref: (value) => ({ value }),
   onUnmounted: (fn) => fn()
 }))
-
-import { useMeshtastic } from '../../app/composables/useMeshtastic.mjs'
-import { useEventEmitter } from '../../app/composables/useEventEmitter.mjs'
 
 // Mock useEventEmitter
 const mockEventEmitter = {
