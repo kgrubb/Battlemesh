@@ -171,6 +171,11 @@ const clearAllState = () => {
 const onTeamUpdated = () => {
   // Persist to server whenever team name or color is edited
   gameState.persistToServer()
+  
+  // Immediately broadcast updated state to all capture points
+  if (_gameSync) {
+    _gameSync.broadcastState()
+  }
 }
 </script>
 

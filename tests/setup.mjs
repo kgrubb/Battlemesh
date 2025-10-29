@@ -1,36 +1,40 @@
-/* eslint-disable no-undef */
-// Mock Web APIs that aren't available in test environment
+ 
+// Minimal mocks for test environment
 
-global.navigator = {
-  ...global.navigator,
-  bluetooth: {
-    requestDevice: vi.fn()
-  },
-  serial: {
-    requestPort: vi.fn()
-  },
-  geolocation: {
-    getCurrentPosition: vi.fn(),
-    watchPosition: vi.fn(() => 1),
-    clearWatch: vi.fn()
-  },
-  vibrate: vi.fn()
+// Mock Vue composables globally - MUST be first
+import { vi } from 'vitest'
+
+vi.mock('vue', () => ({
+  ref: (value) => ({ value }),
+  onUnmounted: (fn) => fn()
+}))
+
+// Mock navigator APIs
+if (typeof global.navigator === 'undefined') {
+  global.navigator = {}
 }
 
+global.navigator.bluetooth = { requestDevice: vi.fn() }
+global.navigator.serial = { requestPort: vi.fn() }
+global.navigator.geolocation = {
+  getCurrentPosition: vi.fn(),
+  watchPosition: vi.fn(() => 1),
+  clearWatch: vi.fn()
+}
+global.navigator.vibrate = vi.fn()
+
+// Simple synchronous WebSocket mock
 global.WebSocket = class WebSocket {
   constructor(url) {
     this.url = url
-    this.readyState = 0
-    setTimeout(() => {
-      this.readyState = 1
-      if (this.onopen) this.onopen()
-    }, 0)
+    this.readyState = 1 // OPEN immediately
+    this.onopen = null
+    this.onclose = null
+    this.onerror = null
+    this.onmessage = null
   }
   
-  send() {}
-  close() {
-    this.readyState = 3
-    if (this.onclose) this.onclose()
-  }
+  send = vi.fn()
+  close = vi.fn()
 }
 

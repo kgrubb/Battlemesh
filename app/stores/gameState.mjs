@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { createTeam, createCapturePoint, createNode } from '~/utils/models.mjs'
-import { DEFAULT_TEAMS } from '~/config/game-config.mjs'
+import { DEFAULT_TEAMS } from '../config/game-config.mjs'
 import { calculateScores, awardCaptureBonus, resetScores } from '~/utils/scoring.mjs'
 import { validateTeamName, validateTeamColor, validateGPSCoordinate, validateTeamId } from '~/utils/validation.mjs'
 
@@ -30,33 +30,51 @@ export const useGameState = defineStore('gameState', {
     
     onlineNodes(state) {
       return state.nodes.filter(n => n.status === 'online')
-    },
-    
-    teamById: (state) => (teamId) => {
-      return state.teams.find(t => t.id === teamId)
     }
   },
   
   actions: {
-    async initialize(config) {
-      this.nodeMode = config.nodeMode || 'capture-point'
-      
-      // Get persistent NATO name from server (non-blocking on failure)
-      if (import.meta.client) {
-        const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 500))
-        const natoFetch = fetch('/api/nato-name')
-          .then(res => res.json())
-          .then(data => data.natoName)
-          .catch(() => null)
-        
-        this.localNodeName = await Promise.race([natoFetch, timeout])
-        
-        if (this.localNodeName) {
-          console.log('[GameState] ✓ Node:', this.localNodeName)
-        }
+    async initialize() {
+      // Determine mode from URL path (always check URL to ensure correct mode)
+      // Skip URL detection in test environment to allow manual mode setting
+      if (import.meta.client && !import.meta.env.VITEST) {
+        const path = window.location.pathname
+        this.nodeMode = path.includes('/admin') ? 'admin' : 'capture-point'
+        console.log('[GameState] Detected mode from URL:', this.nodeMode, 'for path:', path)
+      } else if (!import.meta.env.VITEST) {
+        this.nodeMode = 'capture-point'
       }
       
-      console.log('[GameState] ✓ Initialized as', this.nodeMode)
+      if (import.meta.client) {
+        if (this.nodeMode === 'admin') {
+          this.localNodeName = 'HQ Command'
+          console.log('[GameState] Admin mode - set localNodeName to HQ Command')
+        } else {
+          this.localNodeName = this.getStoredNatoName()
+          if (!this.localNodeName) {
+            console.log('[GameState] No NATO name found, will request from admin')
+          }
+        }
+      }
+    },
+
+    // Simplified NATO name management
+    getStoredNatoName() {
+      return import.meta.client ? sessionStorage.getItem('battlemesh-nato-name') : null
+    },
+
+    updateNatoName(natoName) {
+      if (import.meta.client) {
+        sessionStorage.setItem('battlemesh-nato-name', natoName)
+        this.localNodeName = natoName
+      }
+    },
+
+    clearNatoName() {
+      if (import.meta.client) {
+        sessionStorage.removeItem('battlemesh-nato-name')
+        this.localNodeName = null
+      }
     },
     
     // Admin-only actions
@@ -78,8 +96,6 @@ export const useGameState = defineStore('gameState', {
       
       this.gameActive = false
       this.gameStartTime = null
-      
-      console.log('[GameState] ✓ Game initialized -', this.teams.length, 'teams')
     },
     
     startGame() {
@@ -90,15 +106,13 @@ export const useGameState = defineStore('gameState', {
       
       // Start scoring interval
       this.startScoringInterval()
-      
-      console.log('[GameState] ✓ Game started')
     },
     
     stopGame() {
       if (!this.isAdmin) return
       
       this.gameActive = false
-      this.gameStartTime = null // Reset clock
+      this.gameStartTime = null
       this.stopScoringInterval()
       
       // Reset all capture points to neutral when game stops
@@ -109,8 +123,6 @@ export const useGameState = defineStore('gameState', {
       
       // Persist to server
       this.persistToServer()
-      
-      console.log('[GameState] ✓ Game stopped - points reset, clock cleared')
     },
     
     handleNodeDisconnect(natoName) {
@@ -120,7 +132,6 @@ export const useGameState = defineStore('gameState', {
       const node = this.nodes.find(n => n.id === natoName)
       if (node) {
         node.status = 'offline'
-        console.log('[GameState] ✗ Node disconnected:', natoName)
       }
       
       // Optionally: if game is active and all nodes disconnect, pause the game
@@ -148,8 +159,6 @@ export const useGameState = defineStore('gameState', {
       
       // Persist to server
       this.persistToServer()
-      
-      console.log('[GameState] ✓ Scores reset, game stopped')
     },
     
     addTeam(name, color) {
@@ -177,7 +186,6 @@ export const useGameState = defineStore('gameState', {
       // Persist to server
       this.persistToServer()
       
-      console.log('[GameState] ✓ Team added:', nameValidation.value)
       return team
     },
     
@@ -222,7 +230,6 @@ export const useGameState = defineStore('gameState', {
         const capturePoint = createCapturePoint(natoName)
         this.capturePoints.push(capturePoint)
         this.persistToServer()
-        console.log('[GameState] ✓ Node added:', natoName)
       }
       
       return natoName
@@ -236,68 +243,70 @@ export const useGameState = defineStore('gameState', {
       this.capturePoints = this.capturePoints.filter(cp => cp.id !== natoName)
       
       this.persistToServer()
-      
-      console.log('[GameState] ✓ Node removed:', natoName)
     },
     
     updateNodePosition(natoName, position) {
-      // Validate GPS coordinates
+      this._updatePosition(natoName, position, 'gps')
+    },
+    
+    setStaticPosition(natoName, position) {
+      if (!this.isAdmin) return
+      this._updatePosition(natoName, position, 'static')
+      this.persistToServer()
+    },
+    
+    _updatePosition(natoName, position, type) {
       const validation = validateGPSCoordinate(position.lat, position.lon)
       if (!validation.valid) {
-        console.warn('[GameState] Invalid GPS coordinates:', validation.error)
-        return
+        const errorMsg = `Invalid GPS coordinates: ${validation.error}`
+        if (type === 'static') {
+          console.error('[GameState]', errorMsg)
+          throw new Error(validation.error)
+        } else {
+          console.warn('[GameState]', errorMsg)
+          return
+        }
       }
       
-      // Update node position (if node exists)
+      // Update node position
       const node = this.nodes.find(n => n.id === natoName)
       if (node) {
         node.position = validation.value
         node.lastSeen = Date.now()
       } else if (natoName === this.localNodeName) {
-        // On capture nodes, create local node entry if it doesn't exist
         const localNode = createNode(natoName, this.nodeMode)
         localNode.position = validation.value
         this.nodes.push(localNode)
       }
       
-      // Also update the capture point position (same NATO name)
-      const cp = this.capturePoints.find(cp => cp.id === natoName)
-      if (cp) {
-        // Only update position if not using static position or if static position doesn't exist
-        if (!cp.useStaticPosition || !cp.staticPosition) {
-          cp.position = validation.value
-        }
-      }
-    },
-    
-    setStaticPosition(natoName, position) {
-      if (!this.isAdmin) return
-      
-      // Validate GPS coordinates
-      const validation = validateGPSCoordinate(position.lat, position.lon)
-      if (!validation.valid) {
-        console.error('[GameState] Invalid GPS coordinates:', validation.error)
-        throw new Error(validation.error)
-      }
-      
-      // Find or create capture point
+      // Find or create capture point (only for capture-point nodes)
       let cp = this.capturePoints.find(cp => cp.id === natoName)
       if (!cp) {
-        // Create capture point if it doesn't exist
-        cp = createCapturePoint(natoName)
-        this.capturePoints.push(cp)
+        // Only create capture point if this is a capture-point node
+        const node = this.nodes.find(n => n.id === natoName)
+        if (node && node.mode === 'capture-point') {
+          cp = createCapturePoint(natoName)
+          this.capturePoints.push(cp)
+        } else if (this.isAdmin) {
+          // In admin mode, create both node and capture point if they don't exist
+          // This allows setting static positions for nodes that haven't connected yet
+          const newNode = createNode(natoName, 'capture-point')
+          this.nodes.push(newNode)
+          cp = createCapturePoint(natoName)
+          this.capturePoints.push(cp)
+        } else {
+          // This is an admin node or other non-capture-point node, skip capture point creation
+          return
+        }
       }
       
-      // Set static position
-      cp.staticPosition = validation.value
-      
-      // If no GPS position exists, use static position
-      if (!cp.position) {
+      // Update position based on type
+      if (type === 'static') {
+        cp.staticPosition = validation.value
+        if (!cp.position) cp.position = validation.value
+      } else if (!cp.useStaticPosition || !cp.staticPosition) {
         cp.position = validation.value
       }
-      
-      this.persistToServer()
-      console.log('[GameState] ✓ Static position set for', natoName)
     },
     
     togglePositionSource(natoName) {
@@ -322,12 +331,10 @@ export const useGameState = defineStore('gameState', {
       // Update position based on source
       if (cp.useStaticPosition) {
         cp.position = cp.staticPosition
-        console.log('[GameState] ✓ Switched to static position for', natoName)
       } else {
         // Fall back to GPS position if available
         if (node && node.position) {
           cp.position = node.position
-          console.log('[GameState] ✓ Switched to GPS position for', natoName)
         } else {
           // If no GPS, keep using static
           cp.useStaticPosition = true
@@ -375,8 +382,7 @@ export const useGameState = defineStore('gameState', {
       // Award capture bonus
       const team = this.teams.find(t => t.id === teamId)
       if (team) {
-        const bonus = awardCaptureBonus(team)
-        console.log('[GameState] ✓', natoName, 'captured by', team.name, '→ +' + bonus, 'points')
+        awardCaptureBonus(team)
       }
       
       this.persistToServer()
@@ -396,8 +402,6 @@ export const useGameState = defineStore('gameState', {
       cp.lastCaptureTime = captureTimestamp
       cp.totalCaptures++
       
-      console.log('[CapturePoint] ✓ Sending capture request:', teamId)
-      
       // Event will be sent to admin by useGameSync
       return {
         type: 'capture-event',
@@ -408,78 +412,56 @@ export const useGameState = defineStore('gameState', {
     },
     
     syncFromServer(serverState) {
-      // Sync from authoritative server state (includes activity feed)
       if (serverState.teams) this.teams = serverState.teams
       if (serverState.capturePoints) this.capturePoints = serverState.capturePoints
       if (serverState.gameActive !== undefined) this.gameActive = serverState.gameActive
       if (serverState.gameStartTime) this.gameStartTime = serverState.gameStartTime
       
-      // Nodes from server state represent currently connected nodes
-      // Only process if server explicitly provides nodes array
       if (serverState.nodes) {
         const serverNodeIds = new Set(serverState.nodes.map(n => n.id))
         
-        // Keep existing nodes that are in server list
         this.nodes = this.nodes.filter(n => serverNodeIds.has(n.id))
         
-        // Add new nodes from server
         serverState.nodes.forEach(serverNode => {
           const existing = this.nodes.find(n => n.id === serverNode.id)
           if (!existing) {
             this.nodes.push(serverNode)
           } else {
-            // Update status
             existing.status = serverNode.status
             existing.lastSeen = serverNode.lastSeen
           }
         })
       }
       
-      // If game was active when state was saved, restart scoring interval
       if (this.gameActive && this.isAdmin) {
         this.startScoringInterval()
       }
-      
-      console.log('[GameState] ✓ Synced from server -', this.teams.length, 'teams,', this.capturePoints.length, 'points,', this.nodes.length, 'nodes')
     },
     
     syncFromAdmin(state) {
-      // Capture node receiving state from admin
-      console.log('[GameState] syncFromAdmin - received state with', state.capturePoints?.length, 'capture points')
-      console.log('[GameState] Received capturePoints:', state.capturePoints?.map(cp => ({ id: cp.id, teamId: cp.teamId })))
-      console.log('[GameState] My localNodeName:', this.localNodeName)
-      
       this.teams = state.teams || this.teams
       this.gameActive = state.isActive ?? this.gameActive
       this.gameStartTime = state.startTime || this.gameStartTime
       
-      // Receive ALL capture points (for map display)
+      // Sync nodes to get position information
+      if (state.nodes) {
+        this.nodes = state.nodes
+      }
+      
       if (state.capturePoints) {
-        // Save local capture point's optimistic state BEFORE updating
         const localCp = this.localCapturePoint
         const localCaptureTime = localCp?.lastCaptureTime || 0
         
-        console.log('[GameState] Local CP BEFORE sync:', localCp?.id, 'teamId:', localCp?.teamId, 'lastCapture:', localCaptureTime)
-        
-        // Update all capture points
         this.capturePoints = state.capturePoints
         
-        console.log('[GameState] Local CP AFTER assignment:', this.localCapturePoint?.id, 'teamId:', this.localCapturePoint?.teamId)
-        
-        // Only keep optimistic update if:
-        // 1. Game is still active (not stopped/reset)
-        // 2. Local capture is more recent than admin's data
         if (this.gameActive && localCp && localCaptureTime) {
           const updatedLocalCp = this.localCapturePoint
           if (updatedLocalCp && localCaptureTime > (updatedLocalCp.lastCaptureTime || 0)) {
-            console.log('[GameState] Applying optimistic update - local is newer')
             updatedLocalCp.teamId = localCp.teamId
             updatedLocalCp.lastCaptureTime = localCp.lastCaptureTime
             updatedLocalCp.totalCaptures = localCp.totalCaptures
           }
         }
-        
-        console.log('[GameState] FINAL Local CP after sync:', this.localCapturePoint?.id, 'teamId:', this.localCapturePoint?.teamId)
       }
       
       this.adminConnected = true
@@ -489,17 +471,13 @@ export const useGameState = defineStore('gameState', {
     switchNetworkMode(mode) {
       if (mode === 'wifi' || mode === 'meshtastic') {
         this.networkMode = mode
-        console.log('[GameState] ✓ Network mode:', mode)
       }
     },
     
     startScoringInterval() {
       if (this.scoringInterval) {
-        console.log('[GameState] Scoring interval already running')
         return
       }
-      
-      console.log('[GameState] ✓ Scoring interval started')
       this.scoringInterval = setInterval(() => {
         if (this.gameActive) {
           calculateScores(this.$state)

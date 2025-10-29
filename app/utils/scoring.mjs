@@ -1,4 +1,4 @@
-import { POINTS_PER_CAPTURE, POINTS_PER_SECOND } from '~/config/game-config.mjs'
+import { POINTS_PER_CAPTURE, POINTS_PER_SECOND } from '../config/game-config.mjs'
 
 /**
  * Calculate and update scores for all teams based on current game state

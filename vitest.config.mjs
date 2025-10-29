@@ -9,17 +9,19 @@ export default defineVitestConfig({
     }
   },
   test: {
-    environment: 'nuxt',
-    environmentOptions: {
-      nuxt: {
-        mock: {
-          intersectionObserver: true,
-          indexedDb: true,
-        }
-      }
-    },
+    testTimeout: 3000,
+    hookTimeout: 5000,
+    teardownTimeout: 3000,
     globals: true,
     setupFiles: ['./tests/setup.mjs'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
+      '**/tests/e2e/**'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -28,7 +30,8 @@ export default defineVitestConfig({
         '.nuxt/',
         'tests/',
         '**/*.config.*',
-        '.output/**'
+        '.output/**',
+        '**/*.vue'
       ],
       thresholds: {
         statements: 60,

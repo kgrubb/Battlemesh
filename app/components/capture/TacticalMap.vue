@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-tactical-dark border-2 border-slate-700 p-4 font-mono h-full flex flex-col">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg text-green-500">TACTICAL MAP</h3>
+  <div class="bg-tactical-dark border-2 border-slate-700 p-2 lg:p-4 font-mono h-full flex flex-col">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 lg:mb-4 gap-2 lg:gap-0">
+      <h3 class="text-sm lg:text-lg text-green-500">TACTICAL MAP</h3>
       <div class="flex gap-2 items-center">
         <div class="text-xs text-slate-400 mr-2">
           {{ pointsWithGPS }} / {{ allPointsCount }} points located
@@ -18,24 +18,24 @@
     </div>
     
     <ClientOnly>
-      <div class="flex-1 relative border-2 border-slate-800 bg-slate-950 overflow-hidden">
-        <div ref="mapContainer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;" />
+      <div class="flex-1 relative border-2 border-slate-800 bg-slate-950 overflow-hidden min-h-0">
+        <div ref="mapContainer" class="absolute inset-0 z-0 w-full h-full" />
         
         <!-- Legend overlay -->
-        <div class="absolute top-2 left-2 bg-slate-900/90 border border-slate-700 p-2 text-xs z-[1002]">
+        <div class="absolute top-1 left-1 lg:top-2 lg:left-2 bg-slate-900/90 border border-slate-700 p-1 lg:p-2 text-xs z-[1002] max-w-[120px] lg:max-w-none">
           <div class="text-green-500 font-bold mb-1">LEGEND</div>
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full bg-slate-400" />
-            <span class="text-slate-300">Neutral</span>
+          <div class="flex items-center gap-1 lg:gap-2 mb-1">
+            <div class="w-2 h-2 lg:w-3 lg:h-3 rounded-full bg-slate-400" />
+            <span class="text-slate-300 text-xs">Neutral</span>
           </div>
-          <div v-for="team in gameState.teams" :key="team.id" class="flex items-center gap-2 mb-1">
-            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: team.color }" />
-            <span class="text-slate-300">{{ team.name }}</span>
+          <div v-for="team in gameState.teams" :key="team.id" class="flex items-center gap-1 lg:gap-2 mb-1">
+            <div class="w-2 h-2 lg:w-3 lg:h-3 rounded-full" :style="{ backgroundColor: team.color }" />
+            <span class="text-slate-300 text-xs">{{ team.name }}</span>
           </div>
-          <div class="border-t border-slate-700 mt-2 pt-2">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-green-500 ring-2 ring-green-500/50" />
-              <span class="text-green-500 font-bold">This Point</span>
+          <div class="border-t border-slate-700 mt-1 lg:mt-2 pt-1 lg:pt-2">
+            <div class="flex items-center gap-1 lg:gap-2">
+              <div class="w-2 h-2 lg:w-3 lg:h-3 rounded-full bg-green-500 ring-1 lg:ring-2 ring-green-500/50" />
+              <span class="text-green-500 font-bold text-xs">This Point</span>
             </div>
           </div>
         </div>
@@ -59,20 +59,19 @@ let L = null
 const markers = new Map()
 
 // Only count capture-point nodes (exclude admin)
-const capturePointsOnly = computed(() => {
-  return gameState.capturePoints.filter(cp => {
+const capturePointsOnly = computed(() => 
+  gameState.capturePoints.filter(cp => {
     const node = gameState.nodes.find(n => n.id === cp.id)
     return !node || node.mode === 'capture-point'
   })
-})
+)
 
 const allPointsCount = computed(() => capturePointsOnly.value.length)
 const pointsWithGPS = computed(() => capturePointsOnly.value.filter(cp => cp.position).length)
 
 const getTeamColor = (teamId) => {
-  if (!teamId) return '#9ca3af' // neutral gray
-  const team = gameState.teams.find(t => t.id === teamId)
-  return team ? team.color : '#9ca3af'
+  if (!teamId) return '#9ca3af'
+  return gameState.teams.find(t => t.id === teamId)?.color || '#9ca3af'
 }
 
 const createCustomIcon = (color, isLocal = false) => {
@@ -285,18 +284,58 @@ onMounted(async () => {
   await nextTick()
   await initMap()
   
-  setTimeout(() => {
+  // Multiple attempts to ensure map renders properly on mobile
+  const resizeMap = () => {
     if (map) {
       map.invalidateSize()
     }
-    updateMarkers()
+  }
+  
+  // Initial resize attempts
+  setTimeout(resizeMap, 100)
+  setTimeout(resizeMap, 300)
+  setTimeout(resizeMap, 500)
+  
+  // Handle orientation changes and viewport changes
+  const handleResize = () => {
+    setTimeout(resizeMap, 100)
+  }
+  
+  window.addEventListener('resize', handleResize)
+  window.addEventListener('orientationchange', handleResize)
+  
+  // Handle intersection observer for mobile visibility
+  if (mapContainer.value && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && map) {
+          setTimeout(() => {
+            map.invalidateSize()
+          }, 100)
+        }
+      })
+    })
     
-    // If we have a local position, center on it
-    const localCp = gameState.localCapturePoint
-    if (localCp && localCp.position && map) {
-      map.setView([localCp.position.lat, localCp.position.lon], 16)
-    }
-  }, 100)
+    observer.observe(mapContainer.value)
+    
+    onUnmounted(() => {
+      observer.disconnect()
+    })
+  }
+  
+  updateMarkers()
+  
+  // If we have a local position, center on it
+  const localCp = gameState.localCapturePoint
+  if (localCp && localCp.position && map) {
+    map.setView([localCp.position.lat, localCp.position.lon], 16)
+  }
+  
+  // Cleanup
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
+    window.removeEventListener('orientationchange', handleResize)
+  })
 })
 
 watch(() => gameState.capturePoints, () => {
@@ -305,6 +344,15 @@ watch(() => gameState.capturePoints, () => {
 
 watch(() => gameState.capturePoints.map(cp => cp.teamId).join(','), () => {
   updateMarkers()
+})
+
+// Watch for visibility changes and layout changes
+watch(() => mapContainer.value, (newContainer) => {
+  if (newContainer && map) {
+    setTimeout(() => {
+      map.invalidateSize()
+    }, 100)
+  }
 })
 
 onUnmounted(() => {
@@ -316,6 +364,23 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Ensure map container works with safe areas */
+.flex-1 {
+  min-height: 0;
+  height: 100%;
+}
+
+/* Map container sizing */
+.absolute.inset-0 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /* Slight darkening for satellite imagery */
 :deep(.map-tiles) {
   filter: brightness(85%) contrast(110%);
@@ -354,6 +419,19 @@ onUnmounted(() => {
 
 :deep(.leaflet-control-attribution) {
   display: none !important;
+}
+
+/* Mobile landscape mode fixes */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .flex-1 {
+    overflow: hidden !important;
+    max-width: 100% !important;
+  }
+  
+  .absolute.inset-0 {
+    overflow: hidden !important;
+    max-width: 100% !important;
+  }
 }
 </style>
 
