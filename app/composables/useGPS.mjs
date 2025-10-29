@@ -2,6 +2,8 @@
  * GPS integration with Web Serial API and browser geolocation fallback
  */
 
+import { ref, onUnmounted } from 'vue'
+
 export function useGPS() {
   const position = ref(null)
   const accuracy = ref(null)
@@ -181,7 +183,7 @@ export function useGPS() {
   }
   
   const isSupported = () => {
-    return (typeof navigator !== 'undefined') && (navigator.serial || navigator.geolocation)
+    return (typeof navigator !== 'undefined') && !!(navigator.serial || navigator.geolocation)
   }
   
   onUnmounted(() => {

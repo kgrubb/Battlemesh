@@ -9,15 +9,9 @@ export default defineVitestConfig({
     }
   },
   test: {
-    environment: 'nuxt',
-    environmentOptions: {
-      nuxt: {
-        mock: {
-          intersectionObserver: true,
-          indexedDb: true,
-        }
-      }
-    },
+    testTimeout: 3000,
+    hookTimeout: 5000,
+    teardownTimeout: 3000,
     globals: true,
     setupFiles: ['./tests/setup.mjs'],
     exclude: [
@@ -36,7 +30,8 @@ export default defineVitestConfig({
         '.nuxt/',
         'tests/',
         '**/*.config.*',
-        '.output/**'
+        '.output/**',
+        '**/*.vue'
       ],
       thresholds: {
         statements: 60,

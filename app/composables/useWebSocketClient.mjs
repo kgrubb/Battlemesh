@@ -1,3 +1,4 @@
+import { ref, onUnmounted } from 'vue'
 import { RECONNECT_DELAY_BASE, RECONNECT_DELAY_MAX } from '../config/game-config.mjs'
 import { useEventEmitter } from './useEventEmitter.mjs'
 

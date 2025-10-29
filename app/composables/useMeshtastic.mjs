@@ -2,6 +2,7 @@
  * Meshtastic Bluetooth integration using Web Bluetooth API
  */
 
+import { ref, onUnmounted } from 'vue'
 import { useEventEmitter } from './useEventEmitter.mjs'
 
 const MESHTASTIC_SERVICE_UUID = '6ba1b218-15a8-461f-9fa8-5dcae273eafd'
