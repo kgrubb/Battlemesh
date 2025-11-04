@@ -4,7 +4,7 @@ import { POINTS_PER_CAPTURE, POINTS_PER_SECOND } from '../config/game-config.mjs
  * Calculate and update scores for all teams based on current game state
  */
 export function calculateScores(gameState) {
-  if (!gameState.gameActive && !gameState.isActive) return
+  if (!gameState.gameActive) return
 
   const teamPointsThisTick = {}
 

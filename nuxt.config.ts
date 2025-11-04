@@ -14,11 +14,7 @@ export default defineNuxtConfig({
     '~': fileURLToPath(new URL('./app', import.meta.url)),
     '@': fileURLToPath(new URL('./app', import.meta.url))
   },
-  nitro: {
-    experimental: {
-      websocket: true
-    }
-  },
+  nitro: {},
   app: {
     head: {
       meta: [

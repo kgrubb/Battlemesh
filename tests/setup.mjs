@@ -23,18 +23,45 @@ global.navigator.geolocation = {
 }
 global.navigator.vibrate = vi.fn()
 
-// Simple synchronous WebSocket mock
-global.WebSocket = class WebSocket {
+// Mock EventSource for SSE tests
+global.EventSource = class EventSource {
   constructor(url) {
     this.url = url
-    this.readyState = 1 // OPEN immediately
+    this.readyState = 1 // OPEN
     this.onopen = null
-    this.onclose = null
     this.onerror = null
-    this.onmessage = null
+    this._listeners = new Map()
+    
+    // Auto-open in tests
+    setTimeout(() => {
+      if (this.onopen) this.onopen()
+    }, 0)
   }
   
-  send = vi.fn()
-  close = vi.fn()
+  addEventListener(event, handler) {
+    if (!this._listeners.has(event)) {
+      this._listeners.set(event, [])
+    }
+    this._listeners.get(event).push(handler)
+  }
+  
+  removeEventListener(event, handler) {
+    const handlers = this._listeners.get(event)
+    if (handlers) {
+      const index = handlers.indexOf(handler)
+      if (index > -1) handlers.splice(index, 1)
+    }
+  }
+  
+  // Test helpers
+  _emit(event, data) {
+    const handlers = this._listeners.get(event) || []
+    handlers.forEach(h => h({ data: typeof data === 'string' ? data : JSON.stringify(data) }))
+  }
+  
+  close = vi.fn(() => {
+    this.readyState = 2 // CLOSED
+    if (this.onerror) this.onerror()
+  })
 }
 

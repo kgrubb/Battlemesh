@@ -66,95 +66,125 @@ describe('GameState Store Unit Tests', () => {
   })
 
   describe('Team Management', () => {
-    it('should add team successfully', () => {
+    it('should return add-team-command', () => {
       gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
+      const command = gameState.addTeam('Red Team', '#ff0000')
       
-      expect(gameState.teams).toHaveLength(1)
+      expect(command).toEqual({
+        type: 'add-team-command',
+        name: 'Red Team',
+        color: '#ff0000',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated - server handles it
+      expect(gameState.teams).toHaveLength(0)
+    })
+
+    it('should return update-team-command', () => {
+      gameState.nodeMode = 'admin'
+      gameState.teams = [{ id: 1, name: 'Red Team', color: '#ff0000', score: 0 }]
+      
+      const command = gameState.updateTeam(1, { name: 'Blue Team' })
+      
+      expect(command).toEqual({
+        type: 'update-team-command',
+        teamId: 1,
+        updates: { name: 'Blue Team' },
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated
       expect(gameState.teams[0].name).toBe('Red Team')
-      expect(gameState.teams[0].color).toBe('#ff0000')
     })
 
-    it('should validate team name', () => {
+    it('should return remove-team-command', () => {
       gameState.nodeMode = 'admin'
-      expect(() => gameState.addTeam('', '#ff0000')).toThrow('Team name')
-    })
-
-    it('should validate team color', () => {
-      gameState.nodeMode = 'admin'
-      expect(() => gameState.addTeam('Red Team', 'invalid')).toThrow('Color must be')
-    })
-
-    it('should remove team', () => {
-      gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
-      gameState.addTeam('Blue Team', '#0000ff')
+      gameState.teams = [{ id: 1, name: 'Red', color: '#ff0000', score: 0 }, { id: 2, name: 'Blue', color: '#0000ff', score: 0 }]
       
-      gameState.removeTeam(1)
+      const command = gameState.removeTeam(1)
       
-      expect(gameState.teams).toHaveLength(1)
-      expect(gameState.teams[0].name).toBe('Blue Team')
+      expect(command).toEqual({
+        type: 'remove-team-command',
+        teamId: 1,
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated
+      expect(gameState.teams).toHaveLength(2)
     })
   })
 
   describe('Node Management', () => {
-    it('should add node', () => {
+    it('should update local node cache when adding', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
+      gameState.nodes = [{ id: 'Alpha', mode: 'capture-point', status: 'offline', lastSeen: 0 }]
       
-      expect(gameState.nodes).toHaveLength(1)
-      expect(gameState.nodes[0].id).toBe('Alpha')
-      expect(gameState.nodes[0].mode).toBe('capture-point')
+      const result = gameState.addNode('Alpha')
+      
+      expect(result).toBe('Alpha')
+      expect(gameState.nodes[0].status).toBe('online')
+      expect(gameState.nodes[0].lastSeen).toBeGreaterThan(0)
     })
 
-    it('should remove node', () => {
+    it('should update local node cache when removing', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
-      gameState.addNode('Bravo', 'capture-point')
+      gameState.nodes = [{ id: 'Alpha', mode: 'capture-point', status: 'online', lastSeen: Date.now() }]
       
       gameState.removeNode('Alpha')
       
-      expect(gameState.nodes).toHaveLength(1)
-      expect(gameState.nodes[0].id).toBe('Bravo')
+      // Node status should be updated to offline (server manages actual removal)
+      expect(gameState.nodes[0].status).toBe('offline')
     })
 
-    it('should update node position', () => {
+    it('should return position update command for admin', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
+      const command = gameState.updateNodePosition('Alpha', { lat: 37.7749, lon: -122.4194 })
       
-      gameState.updateNodePosition('Alpha', { lat: 37.7749, lon: -122.4194 })
-      
-      expect(gameState.nodes[0].position).toEqual({ lat: 37.7749, lon: -122.4194 })
+      expect(command).toEqual({
+        type: 'update-position-command',
+        natoName: 'Alpha',
+        position: { lat: 37.7749, lon: -122.4194 },
+        timestamp: expect.any(Number)
+      })
     })
   })
 
   describe('Game Control', () => {
-    it('should start game', () => {
+    it('should return start-game-command', () => {
       gameState.nodeMode = 'admin'
-      gameState.startGame()
+      const command = gameState.startGame()
       
+      expect(command).toEqual({
+        type: 'start-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated - server handles it
+      expect(gameState.gameActive).toBe(false)
+    })
+
+    it('should return stop-game-command', () => {
+      gameState.nodeMode = 'admin'
+      gameState.gameActive = true
+      const command = gameState.stopGame()
+      
+      expect(command).toEqual({
+        type: 'stop-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated
       expect(gameState.gameActive).toBe(true)
-      expect(gameState.gameStartTime).toBeTruthy()
     })
 
-    it('should stop game', () => {
+    it('should return reset-game-command', () => {
       gameState.nodeMode = 'admin'
-      gameState.startGame()
-      gameState.stopGame()
+      gameState.teams = [{ id: 1, name: 'Red', color: '#ff0000', score: 100 }]
       
-      expect(gameState.gameActive).toBe(false)
-    })
-
-    it('should reset game', () => {
-      gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
-      gameState.startGame()
-      gameState.teams[0].score = 100
+      const command = gameState.resetGame()
       
-      gameState.resetGame()
-      
-      expect(gameState.gameActive).toBe(false)
-      expect(gameState.teams[0].score).toBe(0)
+      expect(command).toEqual({
+        type: 'reset-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated
+      expect(gameState.teams[0].score).toBe(100)
     })
   })
 })

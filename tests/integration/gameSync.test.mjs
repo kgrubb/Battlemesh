@@ -45,89 +45,71 @@ describe('GameState Store Tests', () => {
   })
 
   describe('Team Management', () => {
-    it('should add teams', () => {
+    it('should create add-team command', () => {
       gameState.nodeMode = 'admin'
-      expect(gameState.teams).toHaveLength(0)
-      
-      gameState.addTeam('Red Team', '#ff0000')
-      expect(gameState.teams).toHaveLength(1)
-      expect(gameState.teams[0].name).toBe('Red Team')
-      expect(gameState.teams[0].color).toBe('#ff0000')
+      const command = gameState.addTeam('Red Team', '#ff0000')
+      expect(command).toEqual({
+        type: 'add-team-command',
+        name: 'Red Team',
+        color: '#ff0000',
+        timestamp: expect.any(Number)
+      })
     })
 
-    it('should remove teams', () => {
+    it('should create remove-team command', () => {
       gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
-      gameState.addTeam('Blue Team', '#0000ff')
-      expect(gameState.teams).toHaveLength(2)
-      
-      gameState.removeTeam(1)
-      expect(gameState.teams).toHaveLength(1)
-      expect(gameState.teams[0].name).toBe('Blue Team')
+      gameState.teams = [{ id: 1, name: 'Red', color: '#ff0000', score: 0 }, { id: 2, name: 'Blue', color: '#0000ff', score: 0 }]
+      const command = gameState.removeTeam(1)
+      expect(command).toEqual({ type: 'remove-team-command', teamId: 1, timestamp: expect.any(Number) })
     })
 
-    it('should validate team names', () => {
+    it('should allow invalid team names client-side (server validates)', () => {
       gameState.nodeMode = 'admin'
-      expect(() => gameState.addTeam('', '#ff0000')).toThrow('Team name')
+      expect(() => gameState.addTeam('', '#ff0000')).not.toThrow()
     })
 
-    it('should validate team colors', () => {
+    it('should allow invalid team colors client-side (server validates)', () => {
       gameState.nodeMode = 'admin'
-      expect(() => gameState.addTeam('Red Team', 'invalid')).toThrow('Color must be')
+      expect(() => gameState.addTeam('Red Team', 'invalid')).not.toThrow()
     })
   })
 
   describe('Capture Point Management', () => {
-    it('should create capture points for nodes', () => {
+    it('should update local cache when adding node', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
-      
-      expect(gameState.capturePoints).toHaveLength(1)
-      expect(gameState.capturePoints[0].id).toBe('Alpha')
+      gameState.nodes = [{ id: 'Alpha', mode: 'capture-point', status: 'offline', lastSeen: 0 }]
+      const result = gameState.addNode('Alpha', 'capture-point')
+      expect(result).toBe('Alpha')
+      expect(gameState.nodes[0].status).toBe('online')
     })
 
-    it('should handle capture events', () => {
-      gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
-      gameState.addNode('Alpha', 'capture-point')
-      
-      // Set local node name and capture point for the capture to work
+    it('should create capture-event command', () => {
       gameState.localNodeName = 'Alpha'
-      gameState.captureForTeam(1)
-      expect(gameState.capturePoints[0].teamId).toBe(1)
+      const cmd = gameState.captureForTeam(1)
+      expect(cmd).toEqual({ type: 'capture-event', natoName: 'Alpha', teamId: 1, timestamp: expect.any(Number) })
     })
 
-    it('should handle position updates', () => {
+    it('should create update-position command for admin', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
-      
-      gameState.updateNodePosition('Alpha', { lat: 37.7749, lon: -122.4194 })
-      expect(gameState.nodes[0].position).toEqual({ lat: 37.7749, lon: -122.4194 })
+      const cmd = gameState.updateNodePosition('Alpha', { lat: 37.7749, lon: -122.4194 })
+      expect(cmd).toEqual({
+        type: 'update-position-command',
+        natoName: 'Alpha',
+        position: { lat: 37.7749, lon: -122.4194 },
+        timestamp: expect.any(Number)
+      })
     })
   })
 
   describe('Game Control', () => {
-    it('should start and stop games', () => {
+    it('should return start/stop/reset commands', () => {
       gameState.nodeMode = 'admin'
-      expect(gameState.gameActive).toBe(false)
-      
-      gameState.startGame()
-      expect(gameState.gameActive).toBe(true)
-      expect(gameState.gameStartTime).toBeTruthy()
-      
-      gameState.stopGame()
-      expect(gameState.gameActive).toBe(false)
-    })
-
-    it('should reset games', () => {
-      gameState.nodeMode = 'admin'
-      gameState.addTeam('Red Team', '#ff0000')
-      gameState.startGame()
-      gameState.teams[0].score = 100
-      
-      gameState.resetGame()
-      expect(gameState.gameActive).toBe(false)
-      expect(gameState.teams[0].score).toBe(0)
+      const startCmd = gameState.startGame()
+      expect(startCmd).toEqual({ type: 'start-game-command', timestamp: expect.any(Number) })
+      const stopCmd = gameState.stopGame()
+      expect(stopCmd).toEqual({ type: 'stop-game-command', timestamp: expect.any(Number) })
+      const resetCmd = gameState.resetGame()
+      expect(resetCmd).toEqual({ type: 'reset-game-command', timestamp: expect.any(Number) })
     })
   })
 
@@ -140,11 +122,11 @@ describe('GameState Store Tests', () => {
       expect(gameState.isAdmin).toBe(false)
     })
 
-    it('should find local capture point', () => {
+    it('should find local capture point (when server syncs state)', () => {
       gameState.nodeMode = 'admin'
       gameState.localNodeName = 'Alpha'
-      gameState.addNode('Alpha', 'capture-point')
-      
+      // Simulate server sync that includes capture point
+      gameState.capturePoints = [{ id: 'Alpha' }]
       const localCP = gameState.localCapturePoint
       expect(localCP).toBeTruthy()
       expect(localCP.id).toBe('Alpha')
@@ -152,11 +134,11 @@ describe('GameState Store Tests', () => {
 
     it('should filter online nodes', () => {
       gameState.nodeMode = 'admin'
-      gameState.addNode('Alpha', 'capture-point')
-      gameState.addNode('Bravo', 'capture-point')
-      
-      gameState.nodes[1].status = 'offline'
-      
+      // Simulate server state for nodes
+      gameState.nodes = [
+        { id: 'Alpha', mode: 'capture-point', status: 'online' },
+        { id: 'Bravo', mode: 'capture-point', status: 'offline' }
+      ]
       const onlineNodes = gameState.onlineNodes
       expect(onlineNodes).toHaveLength(1)
       expect(onlineNodes[0].id).toBe('Alpha')

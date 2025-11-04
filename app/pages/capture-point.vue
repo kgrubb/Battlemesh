@@ -61,10 +61,20 @@ const gameState = useGameState()
 const gameSync = useGameSync()
 const gps = useGPS()
 
-// Provide gameSync to child components
+// Provide gameSync and GPS to child components
 provide('gameSync', gameSync)
+provide('gps', gps)
 
 let gpsUpdateInterval = null
+
+// Register cleanup BEFORE async operations
+onUnmounted(() => {
+  if (gpsUpdateInterval) {
+    clearInterval(gpsUpdateInterval)
+    gpsUpdateInterval = null
+  }
+  gps.stop()
+})
 
 onMounted(async () => {
   // Check for reset parameter
@@ -84,7 +94,7 @@ onMounted(async () => {
   await gameState.initialize()
   
   // Don't call initializeGame() - that's admin-only
-  // State will be synced from admin server when WebSocket connects
+  // State will be synced from admin server via SSE
   
   // Initialize network sync
   console.log('[Capture Point] Initializing network sync...')
@@ -116,19 +126,11 @@ onMounted(async () => {
     }
     
     if (positionToUse) {
+      // Send position update to server (server processes it and broadcasts)
       gameSync.sendPositionUpdate(positionToUse)
-      
-      // Update local node and capture point position
-      gameState.updateNodePosition(gameState.localNodeName, positionToUse)
+      // Local state will be updated when server broadcasts state back
     }
   }, GPS_UPDATE_FREQUENCY)
-})
-
-onUnmounted(() => {
-  if (gpsUpdateInterval) {
-    clearInterval(gpsUpdateInterval)
-  }
-  gps.stop()
 })
 
 // Set page title

@@ -137,11 +137,14 @@ const scoreDifference = computed(() => {
   return leader.score - (second?.score || 0)
 })
 
+// Only count capture-point nodes (exclude admin/HQ Command)
 const onlineNodesCount = computed(() => 
-  gameState.nodes.filter(n => n.status === 'online').length
+  gameState.nodes.filter(n => n.status === 'online' && n.mode === 'capture-point').length
 )
 
-const totalNodesCount = computed(() => gameState.nodes.length)
+const totalNodesCount = computed(() => 
+  gameState.nodes.filter(n => n.mode === 'capture-point').length
+)
 
 const networkHealthClass = computed(() => {
   const ratio = onlineNodesCount.value / Math.max(totalNodesCount.value, 1)
@@ -162,23 +165,21 @@ const networkHealthText = computed(() => {
 })
 
 const startGame = () => {
-  gameState.startGame()
-  startTimer()
-  
-  // Immediately broadcast state to all capture nodes
-  if (gameSync) {
-    gameSync.broadcastState()
+  // Send command to server - server processes and broadcasts state
+  const command = gameState.startGame()
+  if (command && gameSync) {
+    gameSync.sendCommand(command)
   }
+  startTimer()
 }
 
 const stopGame = () => {
-  gameState.stopGame()
-  stopTimer()
-  
-  // Immediately broadcast state to all capture nodes
-  if (gameSync) {
-    gameSync.broadcastState()
+  // Send command to server - server processes and broadcasts state
+  const command = gameState.stopGame()
+  if (command && gameSync) {
+    gameSync.sendCommand(command)
   }
+  stopTimer()
 }
 
 const startTimer = () => {

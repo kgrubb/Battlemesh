@@ -16,12 +16,8 @@
         <span class="text-green-500 ml-1">{{ displayName }}</span>
       </div>
       
-      <div v-if="hasGPS" class="border-l-2 border-slate-700 pl-2 lg:pl-4">
-        <span v-if="isUsingStatic" class="text-cyan-500">📌 Static GPS</span>
-        <span v-else class="text-green-500">📍 GPS</span>
-      </div>
-      <div v-else class="border-l-2 border-slate-700 pl-2 lg:pl-4">
-        <span class="text-amber-500">⚠ No GPS</span>
+      <div class="border-l-2 border-slate-700 pl-2 lg:pl-4">
+        <span :class="gpsStatus.class">{{ gpsStatus.text }}</span>
       </div>
     </div>
     
@@ -42,6 +38,8 @@
 import { useGameState } from '~/stores/gameState.mjs'
 
 const gameState = useGameState()
+// Get GPS instance from parent (capture-point page) if available, otherwise create new one
+const gps = inject('gps', null)
 
 const adminConnectionClass = computed(() => {
   return gameState.adminConnected ? 'bg-green-500' : 'bg-red-500'
@@ -60,16 +58,28 @@ const displayName = computed(() => {
   return gameState.localNodeName || 'Awaiting assignment...'
 })
 
-const hasGPS = computed(() => {
-  // Check if this node has GPS position
-  const node = gameState.nodes.find(n => n.id === gameState.localNodeName)
-  return !!(node && node.position)
-})
-
 const isUsingStatic = computed(() => {
   // Check if using static position
   const cp = gameState.localCapturePoint
   return !!(cp && cp.useStaticPosition && cp.staticPosition)
+})
+
+const hasGPS = computed(() => {
+  // Check if GPS is actually available from the browser/device
+  // This checks if the GPS composable has a position, not just if server has received it
+  if (!gps) return false
+  return !!(gps.position.value && gps.position.value.lat && gps.position.value.lon)
+})
+
+const gpsStatus = computed(() => {
+  // Determine GPS status to display
+  if (isUsingStatic.value) {
+    return { text: '📌 Static GPS', class: 'text-cyan-500' }
+  } else if (hasGPS.value) {
+    return { text: '📍 GPS', class: 'text-green-500' }
+  } else {
+    return { text: '⚠ No GPS', class: 'text-amber-500' }
+  }
 })
 
 </script>

@@ -61,12 +61,12 @@ describe('useEventEmitter', () => {
       const listener1 = (data) => listener1Calls.push(data)
       const listener2 = (data) => listener2Calls.push(data)
       
-      eventEmitter.on('unsub-test', listener1)
+      const unsubscribe1 = eventEmitter.on('unsub-test', listener1)
       eventEmitter.on('unsub-test', listener2)
       
       eventEmitter.emit('unsub-test', 'first')
       
-      eventEmitter.off('unsub-test', listener1)
+      unsubscribe1()
       
       eventEmitter.emit('unsub-test', 'second')
       
@@ -74,32 +74,27 @@ describe('useEventEmitter', () => {
       expect(listener2Calls).toEqual(['first', 'second'])
     })
 
-    it('should unsubscribe all listeners for event when no specific listener provided', () => {
+    it('should unsubscribe multiple listeners', () => {
       const calls = []
       
-      eventEmitter.on('unsub-all-test', (data) => calls.push(`listener1: ${data}`))
-      eventEmitter.on('unsub-all-test', (data) => calls.push(`listener2: ${data}`))
+      const unsubscribe1 = eventEmitter.on('unsub-all-test', (data) => calls.push(`listener1: ${data}`))
+      const unsubscribe2 = eventEmitter.on('unsub-all-test', (data) => calls.push(`listener2: ${data}`))
       
       eventEmitter.emit('unsub-all-test', 'first')
       
-      eventEmitter.off('unsub-all-test')
+      unsubscribe1()
+      unsubscribe2()
       
       eventEmitter.emit('unsub-all-test', 'second')
       
-      // The current implementation doesn't clear all listeners when no handler is provided
-      // It only clears if there's a single handler
-      expect(calls).toEqual(['listener1: first', 'listener2: first', 'listener1: second', 'listener2: second'])
+      expect(calls).toEqual(['listener1: first', 'listener2: first'])
     })
 
     it('should handle unsubscribing non-existent listener gracefully', () => {
       expect(() => {
-        eventEmitter.off('non-existent-event', () => {})
-      }).not.toThrow()
-    })
-
-    it('should handle unsubscribing from non-existent event gracefully', () => {
-      expect(() => {
-        eventEmitter.off('non-existent-event')
+        const unsubscribe = eventEmitter.on('test-event', () => {})
+        unsubscribe()
+        unsubscribe() // Should be safe to call multiple times
       }).not.toThrow()
     })
   })
@@ -108,21 +103,20 @@ describe('useEventEmitter', () => {
     it('should clean up all listeners', () => {
       const calls = []
       
-      eventEmitter.on('cleanup-test', (data) => calls.push(data))
-      eventEmitter.on('other-event', (data) => calls.push(data))
+      const unsubscribe1 = eventEmitter.on('cleanup-test', (data) => calls.push(data))
+      const unsubscribe2 = eventEmitter.on('other-event', (data) => calls.push(data))
       
       eventEmitter.emit('cleanup-test', 'before')
       eventEmitter.emit('other-event', 'before')
       
       // Simulate cleanup (this would be called in onUnmounted)
-      eventEmitter.off('cleanup-test')
-      eventEmitter.off('other-event')
+      unsubscribe1()
+      unsubscribe2()
       
       eventEmitter.emit('cleanup-test', 'after')
       eventEmitter.emit('other-event', 'after')
       
-      // The current implementation doesn't fully clear listeners
-      expect(calls).toEqual(['before', 'before', 'after', 'after'])
+      expect(calls).toEqual(['before', 'before'])
     })
   })
 
@@ -182,14 +176,15 @@ describe('useEventEmitter', () => {
 
     it('should handle listener that unsubscribes itself', () => {
       let callCount = 0
+      let unsubscribe
       const selfUnsubListener = () => {
         callCount++
         if (callCount === 1) {
-          eventEmitter.off('self-unsub-test', selfUnsubListener)
+          unsubscribe()
         }
       }
       
-      eventEmitter.on('self-unsub-test', selfUnsubListener)
+      unsubscribe = eventEmitter.on('self-unsub-test', selfUnsubListener)
       
       eventEmitter.emit('self-unsub-test')
       eventEmitter.emit('self-unsub-test')

@@ -81,7 +81,6 @@ describe('useMeshtastic', () => {
       expect(typeof meshtastic.disconnect).toBe('function')
       expect(typeof meshtastic.send).toBe('function')
       expect(typeof meshtastic.on).toBe('function')
-      expect(typeof meshtastic.off).toBe('function')
       expect(typeof meshtastic.isSupported).toBe('function')
     })
 
@@ -276,7 +275,6 @@ describe('useMeshtastic', () => {
     it('should return event emitter methods', () => {
       const meshtastic = useMeshtastic()
       expect(meshtastic.on).toBe(mockEventEmitter.on)
-      expect(meshtastic.off).toBe(mockEventEmitter.off)
     })
   })
 })

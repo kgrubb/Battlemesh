@@ -12,7 +12,7 @@ export function useMeshtastic() {
   const device = ref(null)
   const characteristic = ref(null)
   const connected = ref(false)
-  const { on, off, emit } = useEventEmitter()
+  const { on, emit } = useEventEmitter()
   
   const connect = async () => {
     try {
@@ -135,7 +135,6 @@ export function useMeshtastic() {
     disconnect,
     send,
     on,
-    off,
     isSupported
   }
 }

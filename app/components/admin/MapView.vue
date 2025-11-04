@@ -55,8 +55,14 @@ const markers = new Map()
 // Only count capture-point nodes (exclude admin)
 const capturePointsOnly = computed(() => {
   return gameState.capturePoints.filter(cp => {
+    // Explicitly exclude HQ Command (admin node)
+    if (cp.id === 'HQ Command') {
+      return false
+    }
     const node = gameState.nodes.find(n => n.id === cp.id)
-    return !node || node.mode === 'capture-point'
+    // Only show capture points that have a node with capture-point mode
+    // If no node exists, don't show it (node must be connected)
+    return node && node.mode === 'capture-point'
   })
 })
 
@@ -177,17 +183,17 @@ const formatTimeSince = (timestamp) => {
 const updateMarkers = () => {
   if (!map || !L) return
   
-  // Remove markers that no longer exist
+  // Remove markers that no longer exist (use filtered list)
   markers.forEach((marker, id) => {
     const baseId = id.replace('-label', '')
-    if (!gameState.capturePoints.find(cp => cp.id === baseId)) {
+    if (!capturePointsOnly.value.find(cp => cp.id === baseId)) {
       map.removeLayer(marker)
       markers.delete(id)
     }
   })
   
-  // Add or update markers for capture points
-  gameState.capturePoints.forEach(cp => {
+  // Add or update markers for capture points (exclude admin/HQ Command)
+  capturePointsOnly.value.forEach(cp => {
     if (!cp.position) return
     
     const color = getTeamColor(cp.teamId)
@@ -228,7 +234,6 @@ const updateMarkers = () => {
             <span class="text-slate-400">Team:</span> 
             <span style="color: ${getTeamColor(cp.teamId)}">${teamName}</span>
           </div>
-          <div class="text-slate-400 text-xs mb-1">Total Captures: ${cp.totalCaptures}</div>
           <div class="text-slate-400 text-xs mb-1">${nodeStatus}</div>
           <div class="text-slate-400 text-xs">Last Seen: ${lastSeen}</div>
         </div>
@@ -255,7 +260,8 @@ const centerOnPoints = () => {
     return
   }
   
-  const pointsWithGPS = gameState.capturePoints.filter(cp => cp.position)
+  // Only center on capture-point nodes (exclude admin/HQ Command)
+  const pointsWithGPS = capturePointsOnly.value.filter(cp => cp.position)
   
   if (pointsWithGPS.length === 0) {
     console.log('[MapView] No points with GPS to center on')

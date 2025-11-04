@@ -64,7 +64,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 60 * 1000,
     env: {
-      PORT: '3000'
+      PORT: '3000',
+      // Set test PIN for e2e tests
+      TEST_ADMIN_PIN: process.env.TEST_ADMIN_PIN || '123456'
     }
   },
 

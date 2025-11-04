@@ -17,17 +17,20 @@
         class="flex items-center gap-2 p-2 border border-slate-700 bg-slate-900/50"
       >
         <input
-          v-model="team.color"
+          :value="getTeamLocalValue(team.id, 'color')"
           type="color"
           class="w-8 h-8 border-0 flex-shrink-0"
-          @change="onTeamUpdated"
+          @input="updateTeamLocalValue(team.id, 'color', $event.target.value)"
+          @change="onTeamUpdated(team.id, 'color', getTeamLocalValue(team.id, 'color'))"
         >
         <input
-          v-model="team.name"
+          :value="getTeamLocalValue(team.id, 'name')"
           type="text"
           class="flex-1 min-w-0 bg-slate-800 border border-slate-600 px-2 py-1 text-slate-100 font-mono text-xs"
           placeholder="Team name"
-          @blur="onTeamUpdated"
+          @input="updateTeamLocalValue(team.id, 'name', $event.target.value)"
+          @focus="setTeamFieldFocused(team.id, 'name', true)"
+          @blur="handleTeamNameBlur(team.id)"
         >
         <button
           class="px-2 py-1 text-xs bg-red-900 text-red-300 border border-red-700 hover:bg-red-800 flex-shrink-0 whitespace-nowrap"
@@ -96,6 +99,10 @@ const _gameSync = inject('gameSync', null)
 const isCollapsed = ref(false)
 const errorMessage = ref('')
 
+// Local state for team edits to prevent reset while typing
+const teamLocalValues = ref(new Map()) // Map<teamId, { name: string, color: string }>
+const focusedFields = ref(new Map()) // Map<teamId, Set<fieldName>>
+
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
 }
@@ -107,12 +114,102 @@ watch(() => gameState.gameActive, (isActive) => {
   }
 })
 
+// Sync local values when teams change (but only if field is not focused)
+watch(() => gameState.teams, (teams) => {
+  teams.forEach(team => {
+    // Initialize local values for new teams
+    if (!teamLocalValues.value.has(team.id)) {
+      teamLocalValues.value.set(team.id, {
+        name: team.name,
+        color: team.color
+      })
+    }
+    
+    const isNameFocused = focusedFields.value.get(team.id)?.has('name')
+    const isColorFocused = focusedFields.value.get(team.id)?.has('color')
+    
+    if (!isNameFocused) {
+      updateTeamLocalValue(team.id, 'name', team.name, false)
+    }
+    if (!isColorFocused) {
+      updateTeamLocalValue(team.id, 'color', team.color, false)
+    }
+  })
+  
+  // Clean up local values for teams that no longer exist
+  const currentTeamIds = new Set(teams.map(t => t.id))
+  for (const teamId of teamLocalValues.value.keys()) {
+    if (!currentTeamIds.has(teamId)) {
+      teamLocalValues.value.delete(teamId)
+      focusedFields.value.delete(teamId)
+    }
+  }
+}, { deep: true })
+
+// Initialize local values from gameState
+const initializeLocalValues = () => {
+  gameState.teams.forEach(team => {
+    if (!teamLocalValues.value.has(team.id)) {
+      teamLocalValues.value.set(team.id, {
+        name: team.name,
+        color: team.color
+      })
+    }
+  })
+}
+
+// Initialize on mount
+onMounted(() => {
+  initializeLocalValues()
+})
+
+const getTeamLocalValue = (teamId, field) => {
+  const local = teamLocalValues.value.get(teamId)
+  if (local && local[field] !== undefined) {
+    return local[field]
+  }
+  // Fallback to gameState if local value not set
+  const team = gameState.teams.find(t => t.id === teamId)
+  return team ? team[field] : ''
+}
+
+const updateTeamLocalValue = (teamId, field, value, updateFocused = true) => {
+  if (!teamLocalValues.value.has(teamId)) {
+    teamLocalValues.value.set(teamId, { name: '', color: '' })
+  }
+  const local = teamLocalValues.value.get(teamId)
+  local[field] = value
+  
+  if (updateFocused) {
+    setTeamFieldFocused(teamId, field, true)
+  }
+}
+
+const setTeamFieldFocused = (teamId, field, isFocused) => {
+  if (!focusedFields.value.has(teamId)) {
+    focusedFields.value.set(teamId, new Set())
+  }
+  const focused = focusedFields.value.get(teamId)
+  if (isFocused) {
+    focused.add(field)
+  } else {
+    focused.delete(field)
+  }
+}
+
+const handleTeamNameBlur = (teamId) => {
+  setTeamFieldFocused(teamId, 'name', false)
+  const localName = getTeamLocalValue(teamId, 'name')
+  onTeamUpdated(teamId, 'name', localName)
+}
+
 const newTeamName = ref('')
 const newTeamColor = ref('#10b981')
 
 const addTeam = () => {
   errorMessage.value = ''
   
+  // Basic client-side validation for immediate feedback
   const nameValidation = validateTeamName(newTeamName.value)
   if (!nameValidation.valid) {
     errorMessage.value = nameValidation.error
@@ -125,12 +222,14 @@ const addTeam = () => {
     return
   }
   
-  try {
-    gameState.addTeam(nameValidation.value, colorValidation.value)
+  // Send command to server - server validates and processes
+  const command = gameState.addTeam(nameValidation.value, colorValidation.value)
+  if (command && _gameSync) {
+    _gameSync.sendCommand(command)
     newTeamName.value = ''
     newTeamColor.value = '#10b981'
-  } catch (err) {
-    errorMessage.value = err.message
+  } else {
+    errorMessage.value = 'Failed to create command'
   }
 }
 
@@ -141,40 +240,42 @@ const removeTeam = (teamId) => {
   }
   
   if (confirm(`Remove team?`)) {
-    gameState.removeTeam(teamId)
+    // Clean up local state
+    teamLocalValues.value.delete(teamId)
+    focusedFields.value.delete(teamId)
+    
+    const command = gameState.removeTeam(teamId)
+    if (command && _gameSync) {
+      _gameSync.sendCommand(command)
+    }
   }
 }
 
 const resetGame = () => {
   if (confirm('Reset all scores and captures to zero?')) {
-    gameState.resetGame()
-    
-    // Immediately broadcast state to all capture nodes
-    if (_gameSync) {
-      _gameSync.broadcastState()
+    const command = gameState.resetGame()
+    if (command && _gameSync) {
+      _gameSync.sendCommand(command)
     }
   }
 }
 
-const clearAllState = () => {
+const clearAllState = async () => {
   if (confirm('Clear ALL game state including teams, scores, and activity feed? This will delete the save file and cannot be undone.')) {
-    // Send clear command to server
-    if (_gameSync && _gameSync.wsClient) {
-      _gameSync.wsClient.send({
-        type: 'clear-server-state',
-        timestamp: Date.now()
-      })
+    try {
+      const pin = import.meta.client ? sessionStorage.getItem('battlemesh_admin_pin') : null
+      await $fetch('/api/state/clear', { method: 'POST', headers: pin ? { 'X-Admin-Pin': pin } : {} })
+    } catch (e) {
+      console.warn('[TeamConfig] clearAllState failed', e)
     }
   }
 }
 
-const onTeamUpdated = () => {
-  // Persist to server whenever team name or color is edited
-  gameState.persistToServer()
-  
-  // Immediately broadcast updated state to all capture points
-  if (_gameSync) {
-    _gameSync.broadcastState()
+const onTeamUpdated = (teamId, field, value) => {
+  // Send update command to server
+  const command = gameState.updateTeam(teamId, { [field]: value })
+  if (command && _gameSync) {
+    _gameSync.sendCommand(command)
   }
 }
 </script>
