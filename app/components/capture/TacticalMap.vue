@@ -202,7 +202,6 @@ const updateMarkers = () => {
           <div class="text-slate-300 mb-1">
             Team: <span style="color: ${color}">${teamName}</span>
           </div>
-          <div class="text-slate-400 text-xs">Captures: ${cp.totalCaptures}</div>
         </div>
       `)
       

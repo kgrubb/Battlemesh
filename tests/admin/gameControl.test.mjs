@@ -23,30 +23,43 @@ describe('Game Control Functions', () => {
   })
 
   describe('Game Control', () => {
-    it('should start game', () => {
+    it('should return start-game-command', () => {
       gameState.initializeGame()
-      gameState.startGame()
+      const command = gameState.startGame()
       
+      expect(command).toEqual({
+        type: 'start-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated - server handles it
+      expect(gameState.gameActive).toBe(false)
+    })
+
+    it('should return stop-game-command', () => {
+      gameState.initializeGame()
+      gameState.gameActive = true
+      const command = gameState.stopGame()
+      
+      expect(command).toEqual({
+        type: 'stop-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated
       expect(gameState.gameActive).toBe(true)
-      expect(gameState.gameStartTime).toBeTruthy()
     })
 
-    it('should stop game', () => {
+    it('should return reset-game-command', () => {
       gameState.initializeGame()
-      gameState.startGame()
-      gameState.stopGame()
-      
-      expect(gameState.gameActive).toBe(false)
-    })
-
-    it('should reset game', () => {
-      gameState.initializeGame()
-      gameState.startGame()
+      gameState.gameActive = true
       gameState.teams[0].score = 100
-      gameState.resetGame()
+      const command = gameState.resetGame()
       
-      expect(gameState.gameActive).toBe(false)
-      expect(gameState.teams[0].score).toBe(0)
+      expect(command).toEqual({
+        type: 'reset-game-command',
+        timestamp: expect.any(Number)
+      })
+      // State should not be mutated - server handles it
+      expect(gameState.teams[0].score).toBe(100)
     })
   })
 })

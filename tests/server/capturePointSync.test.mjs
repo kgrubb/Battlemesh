@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import * as stateManager from '../../server/utils/gameStateManager.mjs'
-import { getNextAvailableNatoName, resetNameIndex } from '../../server/utils/nodeNames.mjs'
+import { getNextCaptureName, resetNameIndex } from '../../server/utils/nodeNames.mjs'
 
 describe('Capture Point Functions', () => {
   beforeEach(() => {
@@ -9,7 +9,7 @@ describe('Capture Point Functions', () => {
   })
 
   it('should create capture point when NATO name is assigned', () => {
-    const natoName = getNextAvailableNatoName()
+    const natoName = getNextCaptureName()
     stateManager.assignNatoName(natoName)
     
     const state = stateManager.getState()
@@ -21,7 +21,7 @@ describe('Capture Point Functions', () => {
   })
 
   it('should remove capture point when NATO name is released', () => {
-    const natoName = getNextAvailableNatoName()
+    const natoName = getNextCaptureName()
     stateManager.assignNatoName(natoName)
     
     let state = stateManager.getState()
@@ -33,7 +33,7 @@ describe('Capture Point Functions', () => {
   })
 
   it('should handle capture events', () => {
-    const natoName = getNextAvailableNatoName()
+    const natoName = getNextCaptureName()
     stateManager.assignNatoName(natoName)
     
     // Get state and modify capture point directly

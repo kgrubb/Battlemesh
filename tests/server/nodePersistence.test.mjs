@@ -13,34 +13,45 @@ describe('Node Persistence Functions', () => {
   })
 
   it('should maintain nodes when syncing from server', () => {
-    gameState.addNode('Alpha', 'capture-point')
-    gameState.addNode('Bravo', 'capture-point')
-    
-    const initialNodeCount = gameState.nodes.length
-    expect(initialNodeCount).toBe(3) // 2 added + 1 admin node from initializeGame
-    
+    // Nodes are managed server-side; simulate server syncing nodes
     const serverState = {
       teams: gameState.teams,
-      capturePoints: gameState.capturePoints,
+      capturePoints: [],
+      nodes: [
+        { id: 'HQ Command', mode: 'admin', status: 'online', lastSeen: Date.now() },
+        { id: 'Alpha', mode: 'capture-point', status: 'online', lastSeen: Date.now() },
+        { id: 'Bravo', mode: 'capture-point', status: 'online', lastSeen: Date.now() }
+      ],
       gameActive: false,
       gameStartTime: null
     }
     
     gameState.syncFromServer(serverState)
     
-    expect(gameState.nodes).toHaveLength(initialNodeCount)
+    expect(gameState.nodes).toHaveLength(3)
     expect(gameState.nodes.find(n => n.id === 'Alpha')).toBeDefined()
     expect(gameState.nodes.find(n => n.id === 'Bravo')).toBeDefined()
   })
 
   it('should handle node disconnection', () => {
-    gameState.addNode('Alpha', 'capture-point')
-    gameState.addNode('Bravo', 'capture-point')
+    // Start with server-synced nodes
+    const serverState = {
+      teams: gameState.teams,
+      capturePoints: [],
+      nodes: [
+        { id: 'HQ Command', mode: 'admin', status: 'online', lastSeen: Date.now() },
+        { id: 'Alpha', mode: 'capture-point', status: 'online', lastSeen: Date.now() },
+        { id: 'Bravo', mode: 'capture-point', status: 'online', lastSeen: Date.now() }
+      ],
+      gameActive: false,
+      gameStartTime: null
+    }
+    gameState.syncFromServer(serverState)
     
     gameState.handleNodeDisconnect('Alpha')
     
-    expect(gameState.nodes).toHaveLength(3) // 2 added + 1 admin node from initializeGame
-    expect(gameState.nodes.find(n => n.id === 'Alpha').status).toBe('offline')
-    expect(gameState.nodes.find(n => n.id === 'Bravo').status).toBe('online')
+    expect(gameState.nodes).toHaveLength(3)
+    expect(gameState.nodes.find(n => n.id === 'Alpha')?.status).toBe('offline')
+    expect(gameState.nodes.find(n => n.id === 'Bravo')?.status).toBe('online')
   })
 })

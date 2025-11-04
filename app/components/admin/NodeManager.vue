@@ -4,7 +4,7 @@
     
     <div class="space-y-2 max-h-96 overflow-y-auto">
       <div
-        v-for="node in gameState.nodes"
+        v-for="node in capturePointNodes"
         :key="node.id"
         class="border border-slate-700 p-3 bg-slate-900/50"
         :class="nodeStatusClass(node)"
@@ -130,16 +130,22 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useGameState } from '~/stores/gameState.mjs'
 
 const gameState = useGameState()
+const gameSync = inject('gameSync', null)
 
 const showModal = ref(false)
 const currentNodeId = ref(null)
 const lat = ref(null)
 const lon = ref(null)
 const error = ref(null)
+
+// Only show capture-point nodes (exclude admin/HQ Command)
+const capturePointNodes = computed(() => {
+  return gameState.nodes.filter(n => n.mode === 'capture-point')
+})
 
 const getNodeDisplayName = (nodeId) => {
   // Node ID IS the NATO name now
@@ -219,15 +225,23 @@ const saveStaticPosition = () => {
   }
   
   try {
-    gameState.setStaticPosition(currentNodeId.value, { lat: lat.value, lon: lon.value })
-    closeModal()
+    const command = gameState.setStaticPosition(currentNodeId.value, { lat: lat.value, lon: lon.value })
+    if (command && gameSync) {
+      gameSync.sendCommand(command)
+      closeModal()
+    } else {
+      error.value = 'Failed to create command'
+    }
   } catch (err) {
     error.value = err.message || 'Failed to set static position'
   }
 }
 
 const togglePositionSource = (nodeId) => {
-  gameState.togglePositionSource(nodeId)
+  const command = gameState.togglePositionSource(nodeId)
+  if (command && gameSync) {
+    gameSync.sendCommand(command)
+  }
 }
 
 const removeNode = (nodeId) => {

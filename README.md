@@ -185,7 +185,7 @@ npm run test:e2e:headed # Run e2e tests in headed mode
 - **Pinia** - State management
 - **Tailwind CSS** - Styling
 - **Leaflet.js** - Maps
-- **WebSockets** - Real-time communication
+- **Server-Sent Events (SSE)** - Real-time communication
 
 ## 🤝 Contributing
 

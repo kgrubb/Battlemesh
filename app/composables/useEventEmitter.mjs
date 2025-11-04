@@ -1,47 +1,31 @@
+import { ref } from 'vue'
+
 /**
  * Shared event emitter composable
- * Provides consistent event handling across WebSocket and Meshtastic connections
+ * Provides consistent event handling across SSE and Meshtastic connections
  */
 
 export function useEventEmitter() {
-  const eventHandlers = ref({})
-  
-  const on = (eventType, handler) => {
-    if (!eventHandlers.value[eventType]) {
-      eventHandlers.value[eventType] = []
-    }
-    if (Array.isArray(eventHandlers.value[eventType])) {
-      eventHandlers.value[eventType].push(handler)
-    } else {
-      const existing = eventHandlers.value[eventType]
-      eventHandlers.value[eventType] = [existing, handler]
-    }
-  }
-  
+  const handlersByEvent = ref(new Map())
+
   const off = (eventType, handler) => {
-    if (eventHandlers.value[eventType]) {
-      if (Array.isArray(eventHandlers.value[eventType])) {
-        eventHandlers.value[eventType] = eventHandlers.value[eventType].filter(h => h !== handler)
-      } else {
-        delete eventHandlers.value[eventType]
-      }
-    }
+    const existing = handlersByEvent.value.get(eventType)
+    if (!existing) return
+    const next = existing.filter(h => h !== handler)
+    if (next.length === 0) handlersByEvent.value.delete(eventType)
+    else handlersByEvent.value.set(eventType, next)
   }
-  
+
+  const on = (eventType, handler) => {
+    const existing = handlersByEvent.value.get(eventType) || []
+    handlersByEvent.value.set(eventType, [...existing, handler])
+    return () => off(eventType, handler)
+  }
+
   const emit = (eventType, data) => {
-    const handlers = eventHandlers.value[eventType]
-    if (handlers) {
-      if (Array.isArray(handlers)) {
-        handlers.forEach(handler => handler(data))
-      } else {
-        handlers(data)
-      }
-    }
+    const listeners = handlersByEvent.value.get(eventType) || []
+    for (const listener of listeners) listener(data)
   }
-  
-  return {
-    on,
-    off,
-    emit
-  }
+
+  return { on, emit }
 }

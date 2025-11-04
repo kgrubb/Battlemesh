@@ -64,6 +64,5 @@ export function resetNameIndex() {
 }
 
 export const isNatoNameAvailable = natoName => !usedNames.has(natoName)
-export const getNextAvailableNatoName = getNextCaptureName
 export const markNatoNameAsUsed = natoName => usedNames.add(natoName)
 

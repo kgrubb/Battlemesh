@@ -40,8 +40,7 @@
 import { useGameState } from '~/stores/gameState.mjs'
 
 const gameState = useGameState()
-const gameSync = inject('gameSync', null)
-const activities = ref([])
+const activities = computed(() => gameState.activityFeed || [])
 
 const recentActivities = computed(() => {
   return activities.value.slice(0, 10)
@@ -80,98 +79,19 @@ const formatTime = (timestamp) => {
   })
 }
 
-const addActivity = (type, message, teamId = null) => {
-  // Send activity to server for persistence
-  if (gameSync && gameSync.wsClient) {
-    gameSync.wsClient.send({
-      type: 'activity-event',
-      activityType: type,
-      message,
-      teamId,
-      timestamp: Date.now()
-    })
+const getAdminPin = () => {
+  return import.meta.client ? sessionStorage.getItem('battlemesh_admin_pin') : null
+}
+
+const clearActivities = async () => {
+  try {
+    const pin = getAdminPin()
+    await $fetch('/api/activity/clear', { method: 'POST', headers: pin ? { 'X-Admin-Pin': pin } : {} })
+  } catch (e) {
+    console.warn('[ActivityFeed] clearActivities failed', e)
   }
 }
 
-const clearActivities = () => {
-  // Send clear command to server
-  if (gameSync && gameSync.wsClient) {
-    gameSync.wsClient.send({
-      type: 'clear-activity-feed',
-      timestamp: Date.now()
-    })
-  }
-}
-
-// Watch for game state changes
-watch(() => gameState.gameActive, (isActive, wasActive) => {
-  if (isActive && !wasActive) {
-    addActivity('game-start', 'Mission started')
-  } else if (!isActive && wasActive) {
-    addActivity('game-stop', 'Mission stopped')
-  }
-})
-
-// Watch for capture events - use ID-based comparison instead of index
-const capturePointsMap = ref(new Map())
-
-watch(() => gameState.capturePoints, (newPoints) => {
-  if (!newPoints) return
-  
-  newPoints.forEach(newCp => {
-    const oldData = capturePointsMap.value.get(newCp.id)
-    
-    if (oldData && newCp.totalCaptures > oldData.captures) {
-      // Capture happened!
-      const team = gameState.teams.find(t => t.id === newCp.teamId)
-      if (team) {
-        addActivity('capture', `${newCp.id} captured by ${team.name}`, team.id)
-      }
-    }
-    
-    // Update the map with current state
-    capturePointsMap.value.set(newCp.id, {
-      teamId: newCp.teamId,
-      captures: newCp.totalCaptures
-    })
-  })
-}, { deep: true, immediate: true })
-
-// Watch for node changes
-watch(() => gameState.nodes.length, (newCount, oldCount) => {
-  if (oldCount && newCount > oldCount) {
-    addActivity('node-join', `Node connected (${newCount} total)`)
-  } else if (oldCount && newCount < oldCount) {
-    addActivity('node-leave', `Node disconnected (${newCount} total)`)
-  }
-})
-
-// Listen for activity events from server
-onMounted(() => {
-  if (gameSync && gameSync.wsClient) {
-    gameSync.wsClient.on('activity-added', (data) => {
-      if (data.activity) {
-        activities.value.unshift(data.activity)
-      }
-    })
-    
-    gameSync.wsClient.on('activity-feed-cleared', () => {
-      activities.value = []
-    })
-    
-    gameSync.wsClient.on('server-state', (data) => {
-      // Sync activity feed from server state
-      if (data.state && data.state.activityFeed) {
-        activities.value = [...data.state.activityFeed]
-      }
-    })
-  }
-})
-
-// Expose methods for external use
-defineExpose({
-  addActivity,
-  clearActivities
-})
+// Client no longer generates activity entries; server is the single source of truth
 </script>
 
