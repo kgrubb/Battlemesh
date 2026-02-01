@@ -29,13 +29,13 @@
     "vue": "^3.5.26"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^1.9.0",
+    "@nuxt/eslint": "^1.13.0",
     "@nuxt/test-utils": "^3.23.0",
-    "@playwright/test": "^1.56.1",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@playwright/test": "^1.58.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "@vue/test-utils": "^2.4.6",
     "eslint": "^9.38.0",
-    "happy-dom": "^20.3.1",
-    "vitest": "^3.2.4"
+    "happy-dom": "^20.4.0",
+    "vitest": "^4.0.18"
   }
 }
