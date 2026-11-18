@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "monthly"
     groups:
+      playwright:
+        patterns:
+          - "@playwright/*"
+          - "playwright*"
       production-dependencies:
         dependency-type: "production"
       development-dependencies:

@@ -8,8 +8,27 @@ on:
     branches: [ "*" ]
 
 jobs:
-  lint-and-test:
+  playwright-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        sparse-checkout: package-lock.json
+        sparse-checkout-cone-mode: false
+
+    - name: Read Playwright version from lockfile
+      id: version
+      run: echo "version=$(jq -r '.packages["node_modules/@playwright/test"].version' package-lock.json)" >> "$GITHUB_OUTPUT"
+
+  lint-and-test:
+    needs: playwright-version
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}
+      options: --user 1001
     
     steps:
     - name: Checkout code
@@ -29,9 +48,6 @@ jobs:
       
     - name: Run tests with coverage
       run: npm run test:coverage
-      
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps
       
     - name: Run Playwright e2e tests
       run: npm run test:e2e
