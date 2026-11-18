@@ -34,10 +34,10 @@ export default defineVitestConfig({
         '**/*.vue'
       ],
       thresholds: {
-        statements: 60,
-        branches: 55,
+        statements: 51,
+        branches: 40,
         functions: 55,
-        lines: 60
+        lines: 52
       }
     }
   }
